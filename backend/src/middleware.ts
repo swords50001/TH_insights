@@ -1,19 +1,35 @@
+import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
-export function auth(req: any, res: any, next: any) {
-const header = req.headers.authorization;
-if (!header) return res.sendStatus(401);
+dotenv.config();
 
-try {
-req.user = jwt.verify(header.split(" ")[1], process.env.JWT_SECRET!);
-next();
-} catch {
-res.sendStatus(403);
-}
+const JWT_SECRET = process.env.JWT_SECRET;
+
+interface JwtPayload {
+  id: number;
+  role: string;
 }
 
+export interface AuthRequest extends Request {
+  user?: JwtPayload;
+}
 
-export function requireAdmin(req: any, res: any, next: any) {
-if (req.user.role !== "admin") return res.sendStatus(403);
-next();
+export function auth(req: AuthRequest, res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (!header) return res.status(401).json({ error: "Missing token" });
+
+  const token = header.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Invalid token format" });
+
+  if (!JWT_SECRET) {
+    return res.status(500).json({ error: "Server misconfigured: JWT_SECRET missing" });
+  }
+
+  try {
+    req.user = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    next();
+  } catch {
+    return res.status(401).json({ error: "Invalid token" });
+  }
 }
