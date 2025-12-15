@@ -14,11 +14,11 @@ location.href = "/";
 };
 
 
-return (
-<div>
-<input onChange={e => setEmail(e.target.value)} />
-<input type="password" onChange={e => setPassword(e.target.value)} />
-<button onClick={login}>Login</button>
-</div>
-);
+    return (
+        <div>
+            <input onChange={e => setEmail(e.target.value)} />
+            <input type="password" onChange={e => setPassword(e.target.value)} />
+            <button onClick={login}>Login</button>
+        </div>
+    );
 }
