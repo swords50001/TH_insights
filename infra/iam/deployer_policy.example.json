@@ -1,0 +1,54 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ECRPush",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:PutImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:CreateRepository"
+      ],
+      "Resource": "arn:aws:ecr:${REGION}:${ACCOUNT_ID}:repository/${PROJECT}-${ENV}-*"
+    },
+    {
+      "Sid": "ECSUpdate",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:UpdateService",
+        "ecs:DescribeServices",
+        "ecs:DescribeTaskDefinition",
+        "ecs:RegisterTaskDefinition",
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:ecs:${REGION}:${ACCOUNT_ID}:cluster/${PROJECT}-${ENV}-cluster",
+        "arn:aws:ecs:${REGION}:${ACCOUNT_ID}:service/${PROJECT}-${ENV}-svc",
+        "arn:aws:iam::${ACCOUNT_ID}:role/${PROJECT}-${ENV}-ecs-task",
+        "arn:aws:iam::${ACCOUNT_ID}:role/${PROJECT}-${ENV}-ecs-exec"
+      ]
+    },
+    {
+      "Sid": "S3Put",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject","s3:PutObjectAcl","s3:GetObject","s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::${PROJECT}-${ENV}-assets","arn:aws:s3:::${PROJECT}-${ENV}-assets/*"]
+    },
+    {
+      "Sid": "CloudFrontInvalidate",
+      "Effect": "Allow",
+      "Action": ["cloudfront:CreateInvalidation"],
+      "Resource": "arn:aws:cloudfront::${ACCOUNT_ID}:distribution/*"
+    },
+    {
+      "Sid": "CloudWatchLogs",
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogStream","logs:PutLogEvents","logs:DescribeLogStreams"],
+      "Resource": "arn:aws:logs:*:${ACCOUNT_ID}:log-group:/aws/ecs/${PROJECT}-${ENV}-*"
+    }
+  ]
+}

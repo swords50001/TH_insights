@@ -1,0 +1,16 @@
+{
+  "default": {
+    "id": "default",
+    "name": "TH Insights",
+    "themeColor": "#1E3A8A",
+    "logoUrl": "/assets/logo-default.png",
+    "dbOverride": null
+  },
+  "acme.local": {
+    "id": "acme",
+    "name": "Acme Corp",
+    "themeColor": "#FF6B6B",
+    "logoUrl": "/assets/logo-acme.png",
+    "dbOverride": null
+  }
+}

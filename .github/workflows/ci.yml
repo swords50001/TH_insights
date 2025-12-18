@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Validate env examples
+        run: node scripts/validate-env.js
+
+      - name: Backend install & build
+        working-directory: backend
+        run: |
+          npm install
+          npm run build
+
+      - name: Frontend install & build (if present)
+        run: |
+          if [ -f frontend/package.json ]; then
+            echo "frontend/package.json found — installing and building"
+            cd frontend
+            npm install
+            npm run build
+          else
+            echo "No frontend/package.json, skipping frontend build"
+          fi
