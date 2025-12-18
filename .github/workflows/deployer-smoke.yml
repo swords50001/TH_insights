@@ -1,0 +1,61 @@
+name: Deployer smoke test (staging)
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo-name:
+        description: 'ECR repo name to create/push to'
+        required: true
+        default: 'smoke-deploy-repo'
+      cluster-name:
+        description: 'ECS cluster name (optional)'
+        required: false
+        default: ''
+      service-name:
+        description: 'ECS service name (optional)'
+        required: false
+        default: ''
+      s3-bucket:
+        description: 'S3 bucket name to test upload (optional)'
+        required: false
+        default: ''
+      cloudfront-dist-id:
+        description: 'CloudFront distribution ID (optional)'
+        required: false
+        default: ''
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (assume OIDC role)
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify assumed identity
+        run: aws sts get-caller-identity
+
+      - name: Prepare and run smoke test
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          REPO_NAME: ${{ inputs.repo-name }}
+          CLUSTER_NAME: ${{ inputs.cluster-name }}
+          SERVICE_NAME: ${{ inputs.service-name }}
+          S3_BUCKET: ${{ inputs.s3-bucket }}
+          CLOUDFRONT_DIST_ID: ${{ inputs.cloudfront-dist-id }}
+        run: |
+          chmod +x infra/scripts/smoke_test.sh
+          infra/scripts/smoke_test.sh
+
+      - name: Show ECR repo policies (debug)
+        run: |
+          aws ecr describe-repositories --repository-names "${{ inputs.repo-name }}" || echo "repo not found"

@@ -1,0 +1,11 @@
+terraform {
+  backend "s3" {
+    bucket         = "<YOUR_STATE_BUCKET>"
+    key            = "th-insights/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "<YOUR_DYNAMODB_LOCK_TABLE>"
+  }
+}
+
+# To init with these settings without editing files, run:
+# terraform init -backend-config="bucket=<YOUR_STATE_BUCKET>" -backend-config="key=th-insights/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="dynamodb_table=<YOUR_TABLE>"

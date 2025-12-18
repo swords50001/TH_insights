@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import { Pool } from "pg";
 import dotenv from "dotenv";
 import { auth } from "./middleware";
+import { tenantResolver, getTenantConfig } from "./tenant";
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ const PORT = 8080;
 
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
+app.use(tenantResolver);
 
 /* ---------------- DATABASE ---------------- */
 
@@ -33,6 +35,12 @@ pool.connect()
 /* ---------------- AUTH HELPERS ---------------- */
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const MAX_ROWS = parseInt(process.env.MAX_ROWS || "1000", 10);
+const PROHIBITED_SQL = /(;|\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|--|\/\*)\b)/i;
+const ALLOWLIST_ENABLED = process.env.ALLOWLIST_ENABLED === "true";
+const ALLOWED_CARD_IDS = new Set(
+  (process.env.ALLOWED_CARD_IDS || "").split(",").map(s => s.trim()).filter(Boolean)
+);
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET not set");
 }
@@ -92,10 +100,52 @@ app.post("/dashboard/cards/:id/data", auth, async (req, res) => {
     return res.status(404).json({ error: "Card not found" });
   }
 
-  const sql = cardResult.rows[0].sql_query;
-  const data = await pool.query(sql);
+  let sql = cardResult.rows[0].sql_query as string;
 
-  res.json(data.rows);
+  if (!sql || typeof sql !== "string") {
+    return res.status(500).json({ error: "Invalid SQL for card" });
+  }
+
+  // If allowlist is enabled, only allow requests for cards in the allowlist.
+  if (ALLOWLIST_ENABLED) {
+    if (!ALLOWED_CARD_IDS.has(String(id))) {
+      return res.status(403).json({ error: "This card is not allowed to run queries" });
+    }
+  }
+
+  // Basic safety checks: only allow SELECT queries and disallow dangerous keywords/constructs.
+  sql = sql.trim();
+  // Strip trailing semicolon if present
+  sql = sql.replace(/;\s*$/, "");
+
+  if (!/^\s*select\b/i.test(sql)) {
+    return res.status(400).json({ error: "Only SELECT queries are allowed for dashboard cards" });
+  }
+
+  if (PROHIBITED_SQL.test(sql)) {
+    return res.status(400).json({ error: "Query contains prohibited keywords or multiple statements" });
+  }
+
+  try {
+    // Execute the query but cap returned rows by wrapping in a subselect with LIMIT to avoid huge responses.
+    const wrapped = `SELECT * FROM (${sql}) AS subquery LIMIT ${MAX_ROWS}`;
+    const data = await pool.query(wrapped);
+    res.json(data.rows);
+  } catch (err) {
+    console.error("Error executing card SQL", err);
+    return res.status(500).json({ error: "Error executing card query" });
+  }
+});
+
+/* ---------------- TENANT / WHITELABEL ---------------- */
+
+app.get('/tenant/config', (_req, res) => {
+  // tenantResolver attaches tenant config to the request
+  // cast to any to avoid import cycles in types
+  // @ts-ignore
+  const cfg = getTenantConfig(_req as any);
+  if (!cfg) return res.status(404).json({ error: 'Tenant not found' });
+  return res.json(cfg);
 });
 
 /* ---------------- HEALTH ---------------- */
