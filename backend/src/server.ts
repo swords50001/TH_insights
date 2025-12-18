@@ -30,7 +30,7 @@ const pool = new Pool({
 
 pool.connect()
   .then(() => console.log("Connected to database"))
-  .catch(err => console.error("DB connection error", err));
+  .catch((err: any) => console.error("DB connection error", err));
 
 /* ---------------- AUTH HELPERS ---------------- */
 
@@ -131,7 +131,7 @@ app.post("/dashboard/cards/:id/data", auth, async (req, res) => {
     const wrapped = `SELECT * FROM (${sql}) AS subquery LIMIT ${MAX_ROWS}`;
     const data = await pool.query(wrapped);
     res.json(data.rows);
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error executing card SQL", err);
     return res.status(500).json({ error: "Error executing card query" });
   }
