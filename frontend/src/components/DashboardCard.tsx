@@ -41,10 +41,12 @@ export function DashboardCard({
 
 	return (
 		<div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-			<div className="flex items-center justify-between">
-				<h3 className="text-sm font-medium text-gray-600">{title}</h3>
-			</div>
-			<div className="mt-2">
+			{title && (
+				<div className="flex items-center justify-between">
+					<h3 className="text-sm font-medium text-gray-600">{title}</h3>
+				</div>
+			)}
+			<div className={title ? "mt-2" : ""}>
 				<div className="text-3xl font-bold text-gray-900">{renderValue()}</div>
 				{subtitle && (
 					<div className="mt-1 text-xs text-gray-500">{subtitle}</div>

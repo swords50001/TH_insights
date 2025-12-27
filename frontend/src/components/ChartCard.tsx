@@ -28,14 +28,18 @@ interface ChartCardProps {
 }
 
 const COLORS = [
-  "#3b82f6",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#ec4899",
-  "#06b6d4",
-  "#84cc16",
+  "#3b82f6", // Blue
+  "#10b981", // Green
+  "#f59e0b", // Amber
+  "#ef4444", // Red
+  "#8b5cf6", // Purple
+  "#ec4899", // Pink
+  "#06b6d4", // Cyan
+  "#84cc16", // Lime
+  "#f97316", // Orange
+  "#14b8a6", // Teal
+  "#a855f7", // Violet
+  "#f43f5e", // Rose
 ];
 
 export function ChartCard({ data, chartType = "bar", title }: ChartCardProps) {
@@ -47,24 +51,47 @@ export function ChartCard({ data, chartType = "bar", title }: ChartCardProps) {
     );
   }
 
+  // Normalize data - convert string numbers to actual numbers
+  const normalizedData = data.map(row => {
+    const normalized: DataRow = {};
+    Object.keys(row).forEach(key => {
+      const val = row[key];
+      // Try to convert string numbers to actual numbers
+      if (typeof val === 'string' && !isNaN(Number(val)) && val.trim() !== '') {
+        normalized[key] = Number(val);
+      } else {
+        normalized[key] = val;
+      }
+    });
+    return normalized;
+  });
+
   // Auto-detect x-axis and y-axis keys from data
-  const firstRow = data[0];
+  const firstRow = normalizedData[0];
   const keys = Object.keys(firstRow);
+  
+  console.log('ChartCard - Chart Type:', chartType);
+  console.log('ChartCard - First Row:', firstRow);
+  console.log('ChartCard - Keys:', keys);
   
   // Assume first key is x-axis (labels), remaining are y-axis (values)
   const xAxisKey = keys[0];
   const yAxisKeys = keys.slice(1).filter(key => {
     // Only include numeric keys for charts
     const val = firstRow[key];
-    return typeof val === 'number' || !isNaN(Number(val));
+    return typeof val === 'number';
   });
+  
+  console.log('ChartCard - xAxisKey:', xAxisKey);
+  console.log('ChartCard - yAxisKeys:', yAxisKeys);
+  console.log('ChartCard - Normalized Data:', normalizedData);
 
   const renderChart = () => {
     switch (chartType) {
       case "line":
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <LineChart data={normalizedData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey={xAxisKey} stroke="#6b7280" style={{ fontSize: 12 }} />
               <YAxis stroke="#6b7280" style={{ fontSize: 12 }} />
@@ -95,7 +122,7 @@ export function ChartCard({ data, chartType = "bar", title }: ChartCardProps) {
       case "bar":
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <BarChart data={normalizedData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey={xAxisKey} stroke="#6b7280" style={{ fontSize: 12 }} />
               <YAxis stroke="#6b7280" style={{ fontSize: 12 }} />
@@ -123,16 +150,19 @@ export function ChartCard({ data, chartType = "bar", title }: ChartCardProps) {
       case "pie":
         // For pie chart, use first numeric key as value
         const valueKey = yAxisKeys[0] || keys[1];
+        console.log('Pie Chart - valueKey:', valueKey);
+        console.log('Pie Chart - data sample:', normalizedData.slice(0, 2));
         return (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={data}
+                data={normalizedData}
                 dataKey={valueKey}
                 nameKey={xAxisKey}
                 cx="50%"
                 cy="50%"
-                outerRadius={80}
+                outerRadius="65%"
+                innerRadius="0%"
                 label={(entry) => `${entry[xAxisKey]}: ${entry[valueKey]}`}
                 style={{ fontSize: 11 }}
               >
@@ -148,6 +178,7 @@ export function ChartCard({ data, chartType = "bar", title }: ChartCardProps) {
                   fontSize: 12
                 }} 
               />
+              <Legend />
             </PieChart>
           </ResponsiveContainer>
         );
@@ -155,7 +186,7 @@ export function ChartCard({ data, chartType = "bar", title }: ChartCardProps) {
       case "area":
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <AreaChart data={normalizedData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey={xAxisKey} stroke="#6b7280" style={{ fontSize: 12 }} />
               <YAxis stroke="#6b7280" style={{ fontSize: 12 }} />

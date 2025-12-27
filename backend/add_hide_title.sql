@@ -1,0 +1,1 @@
+ALTER TABLE dashboard_cards ADD COLUMN IF NOT EXISTS hide_title BOOLEAN DEFAULT false;

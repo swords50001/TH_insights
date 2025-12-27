@@ -24,6 +24,7 @@ type DashboardGridProps = {
 	readOnly?: boolean;
 	onCardMoved?: (cardId: string, x: number, y: number) => void;
 	onCardResized?: (cardId: string, width: number, height: number) => void;
+	onCardRemoved?: (cardId: string) => void;
 };
 
 const GRID_SIZE = 12; // 12-column grid
@@ -34,11 +35,13 @@ function GridCard({
 	readOnly,
 	onMove,
 	onResize,
+	onRemove,
 }: {
 	card: PositionedCard;
 	readOnly?: boolean;
 	onMove?: (dx: number, dy: number) => void;
 	onResize?: (dw: number, dh: number) => void;
+	onRemove?: () => void;
 }) {
 	const handleDragMove = (e: React.MouseEvent) => {
 		if (readOnly || !onMove) return;
@@ -130,11 +133,33 @@ function GridCard({
 				<span style={{ fontSize: 14, fontWeight: 500, color: "#374151" }}>
 					{card.title}
 				</span>
-				{!readOnly && (
-					<span style={{ fontSize: 11, color: "#9ca3af" }}>
-						{card.width}×{card.height}
-					</span>
-				)}
+				<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+					{!readOnly && (
+						<span style={{ fontSize: 11, color: "#9ca3af" }}>
+							{card.width}×{card.height}
+						</span>
+					)}
+					{!readOnly && onRemove && (
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								onRemove();
+							}}
+							style={{
+								padding: "2px 6px",
+								borderRadius: 4,
+								border: "1px solid #ef4444",
+								background: "#fff",
+								color: "#ef4444",
+								cursor: "pointer",
+								fontSize: 11,
+								fontWeight: 500,
+							}}
+						>
+							×
+						</button>
+					)}
+				</div>
 			</div>
 
 			{/* Card content */}
@@ -167,6 +192,7 @@ export function DashboardGrid({
 	readOnly = false,
 	onCardMoved,
 	onCardResized,
+	onCardRemoved,
 }: DashboardGridProps) {
 	const [cards, setCards] = useState<PositionedCard[]>(initialCards);
 
@@ -261,6 +287,7 @@ export function DashboardGrid({
 					readOnly={readOnly}
 					onMove={(dx, dy) => updateCardPosition(card.id, dx, dy)}
 					onResize={(dw, dh) => updateCardSize(card.id, dw, dh)}
+					onRemove={onCardRemoved ? () => onCardRemoved(card.id) : undefined}
 				/>
 			))}
 

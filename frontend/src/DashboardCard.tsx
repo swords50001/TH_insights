@@ -12,6 +12,7 @@ interface Card {
   chart_type?: ChartType;
   drilldown_enabled?: boolean;
   drilldown_query?: string;
+  hide_title?: boolean;
 }
 
 // Type definition for data rows
@@ -67,7 +68,7 @@ export function DashboardCard({ card }: DashboardCardProps) {
   if (card.visualization_type === "metric") {
     const value = (data[0]?.value ?? null) as number | null;
     return (
-      <TotalCard title={card.title} value={value} loading={loading} error={error} />
+      <TotalCard title={card.hide_title ? "" : card.title} value={value} loading={loading} error={error} />
     );
   }
 
@@ -88,13 +89,13 @@ export function DashboardCard({ card }: DashboardCardProps) {
   }
 
   if (card.visualization_type === "chart") {
-    return <ChartCard data={data} chartType={card.chart_type} title={card.title} />;
+    return <ChartCard data={data} chartType={card.chart_type} title={card.hide_title ? "" : card.title} />;
   }
 
   return (
     <EnhancedTable 
       data={data} 
-      title={card.title}
+      title={card.hide_title ? "" : card.title}
       cardId={card.id}
       drilldownEnabled={card.drilldown_enabled}
       drilldownQuery={card.drilldown_query}
