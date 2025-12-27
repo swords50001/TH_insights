@@ -14,7 +14,7 @@ export function Dashboard() {
         setLoading(true);
         
         // Load the published layout configured by admins
-        const published = getPublishedLayout();
+        const published = await getPublishedLayout();
         
         if (!published) {
           setError("Dashboard has not been configured yet. Please contact an administrator.");

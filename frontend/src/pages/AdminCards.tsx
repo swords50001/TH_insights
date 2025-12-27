@@ -12,6 +12,7 @@ interface Card {
   chart_type?: "line" | "bar" | "pie" | "area";
   drilldown_enabled?: boolean;
   drilldown_query?: string;
+  hide_title?: boolean;
   is_active: boolean;
 }
 
@@ -108,6 +109,7 @@ export default function AdminCards() {
       chart_type: card.chart_type,
       drilldown_enabled: card.drilldown_enabled,
       drilldown_query: card.drilldown_query,
+      hide_title: card.hide_title,
       is_active: card.is_active,
     });
   };
@@ -263,6 +265,20 @@ export default function AdminCards() {
                 <option value="false">Inactive</option>
               </select>
             </div>
+          </div>
+
+          {/* Hide Title Checkbox */}
+          <div style={{ display: "flex", alignItems: "center", padding: 12, background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+            <input
+              type="checkbox"
+              id="hide_title"
+              checked={form.hide_title || false}
+              onChange={e => setForm({ ...form, hide_title: e.target.checked })}
+              style={{ marginRight: 8 }}
+            />
+            <label htmlFor="hide_title" style={{ fontSize: 14, fontWeight: 500 }}>
+              Hide Card Title (useful for clean dashboards with only visual content)
+            </label>
           </div>
 
           {/* Drill-down configuration for table cards */}

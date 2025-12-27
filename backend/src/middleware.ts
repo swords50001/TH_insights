@@ -9,6 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 interface JwtPayload {
   id: number;
   role: string;
+  tenant_id: string;
 }
 
 export interface AuthRequest extends Request {

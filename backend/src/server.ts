@@ -6,7 +6,9 @@ import { Pool } from "pg";
 import dotenv from "dotenv";
 import { auth } from "./middleware";
 import { tenantResolver, getTenantConfig } from "./tenant";
+import { signToken } from "./auth";
 import adminRoutes from "./routes/admin.routes";
+import layoutRoutes from "./routes/layout.routes";
 
 dotenv.config();
 
@@ -57,7 +59,7 @@ app.post("/auth/login", async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   const result = await pool.query(
-    "SELECT id, password_hash, role FROM users WHERE email = $1",
+    "SELECT id, password_hash, role, tenant_id FROM users WHERE email = $1",
     [email]
   );
 
@@ -72,26 +74,24 @@ app.post("/auth/login", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  const token = jwt.sign(
-    { id: user.id, role: user.role },
-    JWT_SECRET,
-    { expiresIn: "8h" }
-  );
+  const token = signToken(user);
 
   res.json({ token });
 });
 
 /* ---------------- DASHBOARD ROUTES ---------------- */
 
-app.get("/dashboard/cards", async (_req, res) => {
+app.get("/dashboard/cards", auth, async (req: AuthRequest, res) => {
+  const tenant_id = req.user?.tenant_id || 'default';
   const result = await pool.query(
-    "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query FROM dashboard_cards ORDER BY id"
+    "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title FROM dashboard_cards WHERE tenant_id = $1 ORDER BY id",
+    [tenant_id]
   );
   res.json(result.rows);
 });
 
 // Preview endpoint for testing queries before saving (must be BEFORE /:id route)
-app.post("/dashboard/cards/preview/data", async (req, res) => {
+app.post("/dashboard/cards/preview/data", auth, async (req: AuthRequest, res) => {
   const { sql_query } = req.body;
 
   if (!sql_query || typeof sql_query !== "string") {
@@ -121,12 +121,13 @@ app.post("/dashboard/cards/preview/data", async (req, res) => {
   }
 });
 
-app.post("/dashboard/cards/:id/data", async (req, res) => {
+app.post("/dashboard/cards/:id/data", auth, async (req: AuthRequest, res) => {
   const { id } = req.params;
+  const tenant_id = req.user?.tenant_id || 'default';
 
   const cardResult = await pool.query(
-    "SELECT sql_query FROM dashboard_cards WHERE id = $1",
-    [id]
+    "SELECT sql_query FROM dashboard_cards WHERE id = $1 AND tenant_id = $2",
+    [id, tenant_id]
   );
 
   if (!cardResult.rows.length) {
@@ -173,6 +174,10 @@ app.post("/dashboard/cards/:id/data", async (req, res) => {
 /* ---------------- ADMIN ROUTES ---------------- */
 
 app.use('/admin', adminRoutes);
+
+/* ---------------- LAYOUT ROUTES ---------------- */
+
+app.use('/dashboard/layout', layoutRoutes);
 
 /* ---------------- TENANT / WHITELABEL ---------------- */
 
