@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import dotenv from "dotenv";
 import { auth } from "./middleware";
 import { tenantResolver, getTenantConfig } from "./tenant";
+import adminRoutes from "./routes/admin.routes";
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ const PORT = 8080;
 
 /* ---------------- MIDDLEWARE ---------------- */
 
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors({ origin: ["http://localhost:5173", "http://localhost:3000"] }));
 app.use(express.json());
 app.use(tenantResolver);
 
@@ -22,10 +23,11 @@ app.use(tenantResolver);
 
 const pool = new Pool({
   host: process.env.DB_HOST,
+  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
+  database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  ssl: { rejectUnauthorized: false }
+  ssl: false // local dev
 });
 
 pool.connect()
@@ -81,14 +83,45 @@ app.post("/auth/login", async (req: Request, res: Response) => {
 
 /* ---------------- DASHBOARD ROUTES ---------------- */
 
-app.get("/dashboard/cards", auth, async (_req, res) => {
+app.get("/dashboard/cards", async (_req, res) => {
   const result = await pool.query(
-    "SELECT id, title, visualization_type FROM dashboard_cards ORDER BY id"
+    "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query FROM dashboard_cards ORDER BY id"
   );
   res.json(result.rows);
 });
 
-app.post("/dashboard/cards/:id/data", auth, async (req, res) => {
+// Preview endpoint for testing queries before saving (must be BEFORE /:id route)
+app.post("/dashboard/cards/preview/data", async (req, res) => {
+  const { sql_query } = req.body;
+
+  if (!sql_query || typeof sql_query !== "string") {
+    return res.status(400).json({ error: "SQL query is required" });
+  }
+
+  let sql = sql_query.trim();
+  // Strip trailing semicolon if present
+  sql = sql.replace(/;\s*$/, "");
+
+  if (!/^\s*select\b/i.test(sql)) {
+    return res.status(400).json({ error: "Only SELECT queries are allowed" });
+  }
+
+  if (PROHIBITED_SQL.test(sql)) {
+    return res.status(400).json({ error: "Query contains prohibited keywords or multiple statements" });
+  }
+
+  try {
+    // Execute the query but cap returned rows
+    const wrapped = `SELECT * FROM (${sql}) AS subquery LIMIT ${MAX_ROWS}`;
+    const data = await pool.query(wrapped);
+    res.json(data.rows);
+  } catch (err: any) {
+    console.error("Error executing preview SQL", err);
+    return res.status(400).json({ error: err.message || "Error executing query" });
+  }
+});
+
+app.post("/dashboard/cards/:id/data", async (req, res) => {
   const { id } = req.params;
 
   const cardResult = await pool.query(
@@ -136,6 +169,10 @@ app.post("/dashboard/cards/:id/data", auth, async (req, res) => {
     return res.status(500).json({ error: "Error executing card query" });
   }
 });
+
+/* ---------------- ADMIN ROUTES ---------------- */
+
+app.use('/admin', adminRoutes);
 
 /* ---------------- TENANT / WHITELABEL ---------------- */
 
