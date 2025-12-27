@@ -1,23 +1,23 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-
+import { Routes, Route } from "react-router-dom";
+import { Header } from "./components/Header";
+import { Dashboard } from "./pages/Dashboard";
+import AdminCards from "./pages/AdminCards";
+import { AdminDashboard } from "./pages/AdminDashboard";
+import Login from "./pages/Login";
 
 export default function App() {
-const [cards, setCards] = useState<any[]>([]);
-
-
-useEffect(() => {
-axios.get("/dashboard/cards", {
-headers: { Authorization: `Bearer ${localStorage.token}` }
-}).then(res => setCards(res.data));
-}, []);
-
-
-return (
-    <div className="grid">
-        {cards.map(card => (
-            <DashboardCard key={card.id} card={card} />
-        ))}
+  return (
+    <div className="app">
+      <Header />
+      <main className="main" style={{ height: "calc(100vh - 64px)" }}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/admin" element={<AdminCards />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/login" element={<Login />} />
+        </Routes>
+      </main>
     </div>
-);
+  );
 }
