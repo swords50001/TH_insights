@@ -25,6 +25,8 @@ interface ChartCardProps {
   data: DataRow[];
   chartType?: ChartType;
   title: string;
+  fontSize?: string;
+  fontFamily?: string;
 }
 
 const COLORS = [
@@ -42,7 +44,7 @@ const COLORS = [
   "#f43f5e", // Rose
 ];
 
-export function ChartCard({ data, chartType = "bar", title }: ChartCardProps) {
+export function ChartCard({ data, chartType = "bar", title, fontSize, fontFamily }: ChartCardProps) {
   if (!data || data.length === 0) {
     return (
       <div style={{ padding: 20, textAlign: "center", color: "#6b7280" }}>
@@ -50,6 +52,23 @@ export function ChartCard({ data, chartType = "bar", title }: ChartCardProps) {
       </div>
     );
   }
+
+  // Map font family settings to CSS values
+  const getFontFamily = (family?: string) => {
+    const familyMap: Record<string, string> = {
+      default: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      arial: "Arial, sans-serif",
+      roboto: "'Roboto', sans-serif",
+      helvetica: "Helvetica, Arial, sans-serif",
+      times: "'Times New Roman', Times, serif",
+      georgia: "Georgia, serif",
+      courier: "'Courier New', Courier, monospace",
+      monospace: "monospace",
+    };
+    return familyMap[family || "default"] || familyMap.default;
+  };
+
+  const containerFontFamily = getFontFamily(fontFamily);
 
   // Normalize data - convert string numbers to actual numbers
   const normalizedData = data.map(row => {
@@ -220,7 +239,7 @@ export function ChartCard({ data, chartType = "bar", title }: ChartCardProps) {
   };
 
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: 250 }}>
+    <div style={{ width: "100%", height: "100%", minHeight: 250, fontFamily: containerFontFamily }}>
       {renderChart()}
     </div>
   );

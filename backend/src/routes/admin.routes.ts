@@ -13,25 +13,25 @@ res.json(rows);
 });
 
 router.post("/cards", async (req: AuthRequest, res) => {
-  const { title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title } = req.body;
+  const { title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family } = req.body;
   const tenant_id = req.user?.tenant_id || 'default';
   const { rows } = await pool.query(
-    `INSERT INTO dashboard_cards (title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, tenant_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-    [title, description, sql_query, visualization_type, chart_type || null, drilldown_enabled || false, drilldown_query || null, hide_title || false, tenant_id]
+    `INSERT INTO dashboard_cards (title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, tenant_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+    [title, description, sql_query, visualization_type, chart_type || null, drilldown_enabled || false, drilldown_query || null, hide_title || false, font_size || 'medium', font_family || 'default', tenant_id]
   );
   res.json(rows[0]);
 });
 
 router.put("/cards/:id", async (req: AuthRequest, res) => {
   const { id } = req.params;
-  const { title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, is_active } = req.body;
+  const { title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, is_active, font_size, font_family } = req.body;
   const tenant_id = req.user?.tenant_id || 'default';
   const { rows } = await pool.query(
     `UPDATE dashboard_cards 
-     SET title = $1, description = $2, sql_query = $3, visualization_type = $4, chart_type = $5, drilldown_enabled = $6, drilldown_query = $7, hide_title = $8, is_active = $9
-     WHERE id = $10 AND tenant_id = $11 RETURNING *`,
-    [title, description, sql_query, visualization_type, chart_type || null, drilldown_enabled || false, drilldown_query || null, hide_title || false, is_active, id, tenant_id]
+     SET title = $1, description = $2, sql_query = $3, visualization_type = $4, chart_type = $5, drilldown_enabled = $6, drilldown_query = $7, hide_title = $8, is_active = $9, font_size = $10, font_family = $11
+     WHERE id = $12 AND tenant_id = $13 RETURNING *`,
+    [title, description, sql_query, visualization_type, chart_type || null, drilldown_enabled || false, drilldown_query || null, hide_title || false, is_active, font_size || 'medium', font_family || 'default', id, tenant_id]
   );
   res.json(rows[0]);
 });
