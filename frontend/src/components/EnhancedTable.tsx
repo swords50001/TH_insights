@@ -19,6 +19,8 @@ interface EnhancedTableProps {
   cardId?: string;
   drilldownEnabled?: boolean;
   drilldownQuery?: string;
+  fontSize?: string;
+  fontFamily?: string;
 }
 
 // Conditional formatting rules
@@ -29,7 +31,7 @@ type ConditionalFormat = {
   style: React.CSSProperties;
 };
 
-export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldownQuery }: EnhancedTableProps) {
+export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldownQuery, fontSize, fontFamily }: EnhancedTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [conditionalFormatting, setConditionalFormatting] = useState<
@@ -39,6 +41,23 @@ export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldown
   const [drilldownLoading, setDrilldownLoading] = useState(false);
   const [drilldownError, setDrilldownError] = useState<string | null>(null);
   const [selectedRow, setSelectedRow] = useState<DataRow | null>(null);
+
+  // Map font family settings to CSS values
+  const getFontFamily = (family?: string) => {
+    const familyMap: Record<string, string> = {
+      default: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      arial: "Arial, sans-serif",
+      roboto: "'Roboto', sans-serif",
+      helvetica: "Helvetica, Arial, sans-serif",
+      times: "'Times New Roman', Times, serif",
+      georgia: "Georgia, serif",
+      courier: "'Courier New', Courier, monospace",
+      monospace: "monospace",
+    };
+    return familyMap[family || "default"] || familyMap.default;
+  };
+
+  const containerFontFamily = getFontFamily(fontFamily);
 
   console.log('EnhancedTable props:', { cardId, drilldownEnabled, drilldownQuery, dataLength: data?.length });
 
@@ -206,7 +225,7 @@ export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldown
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", fontFamily: containerFontFamily }}>
       {/* Filter inputs */}
       <div
         style={{

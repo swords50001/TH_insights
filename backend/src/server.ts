@@ -84,7 +84,7 @@ app.post("/auth/login", async (req: Request, res: Response) => {
 app.get("/dashboard/cards", auth, async (req: AuthRequest, res) => {
   const tenant_id = req.user?.tenant_id || 'default';
   const result = await pool.query(
-    "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title FROM dashboard_cards WHERE tenant_id = $1 ORDER BY id",
+    "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family FROM dashboard_cards WHERE tenant_id = $1 ORDER BY id",
     [tenant_id]
   );
   res.json(result.rows);

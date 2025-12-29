@@ -13,6 +13,8 @@ interface Card {
   drilldown_enabled?: boolean;
   drilldown_query?: string;
   hide_title?: boolean;
+  font_size?: string;
+  font_family?: string;
   is_active: boolean;
 }
 
@@ -279,6 +281,64 @@ export default function AdminCards() {
             <label htmlFor="hide_title" style={{ fontSize: 14, fontWeight: 500 }}>
               Hide Card Title (useful for clean dashboards with only visual content)
             </label>
+          </div>
+
+          {/* Font Customization */}
+          <div style={{ padding: 16, background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#374151" }}>
+              Font Customization
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
+                  Font Size
+                </label>
+                <select
+                  value={form.font_size || "medium"}
+                  onChange={e => setForm({ ...form, font_size: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 6,
+                    fontSize: 14,
+                    background: "#fff",
+                  }}
+                >
+                  <option value="small">Small</option>
+                  <option value="medium">Medium (Default)</option>
+                  <option value="large">Large</option>
+                  <option value="x-large">Extra Large</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
+                  Font Family
+                </label>
+                <select
+                  value={form.font_family || "default"}
+                  onChange={e => setForm({ ...form, font_family: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 6,
+                    fontSize: 14,
+                    background: "#fff",
+                  }}
+                >
+                  <option value="default">Default (System)</option>
+                  <option value="arial">Arial</option>
+                  <option value="roboto">Roboto</option>
+                  <option value="helvetica">Helvetica</option>
+                  <option value="times">Times New Roman</option>
+                  <option value="georgia">Georgia</option>
+                  <option value="courier">Courier New</option>
+                  <option value="monospace">Monospace</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           {/* Drill-down configuration for table cards */}

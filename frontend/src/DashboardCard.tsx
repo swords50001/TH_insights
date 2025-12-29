@@ -13,6 +13,8 @@ interface Card {
   drilldown_enabled?: boolean;
   drilldown_query?: string;
   hide_title?: boolean;
+  font_size?: string;
+  font_family?: string;
 }
 
 // Type definition for data rows
@@ -68,7 +70,14 @@ export function DashboardCard({ card }: DashboardCardProps) {
   if (card.visualization_type === "metric") {
     const value = (data[0]?.value ?? null) as number | null;
     return (
-      <TotalCard title={card.hide_title ? "" : card.title} value={value} loading={loading} error={error} />
+      <TotalCard 
+        title={card.hide_title ? "" : card.title} 
+        value={value} 
+        loading={loading} 
+        error={error}
+        fontSize={card.font_size}
+        fontFamily={card.font_family}
+      />
     );
   }
 
@@ -89,7 +98,15 @@ export function DashboardCard({ card }: DashboardCardProps) {
   }
 
   if (card.visualization_type === "chart") {
-    return <ChartCard data={data} chartType={card.chart_type} title={card.hide_title ? "" : card.title} />;
+    return (
+      <ChartCard 
+        data={data} 
+        chartType={card.chart_type} 
+        title={card.hide_title ? "" : card.title}
+        fontSize={card.font_size}
+        fontFamily={card.font_family}
+      />
+    );
   }
 
   return (
@@ -99,6 +116,8 @@ export function DashboardCard({ card }: DashboardCardProps) {
       cardId={card.id}
       drilldownEnabled={card.drilldown_enabled}
       drilldownQuery={card.drilldown_query}
+      fontSize={card.font_size}
+      fontFamily={card.font_family}
     />
   );
 }
