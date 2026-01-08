@@ -3,8 +3,15 @@ import { api } from "./api";
 
 const STORAGE_KEY = "dashboard:publishedLayout";
 
+export interface GroupPosition {
+  groupName: string;
+  x: number;
+  y: number;
+}
+
 export interface PublishedLayout {
   cards: PositionedCard[];
+  groupPositions?: GroupPosition[];
   publishedAt: string;
   publishedBy?: string;
 }
@@ -35,13 +42,14 @@ export async function getPublishedLayout(): Promise<PublishedLayout | null> {
 }
 
 // Publish layout to server (tenant-aware)
-export async function publishLayout(cards: PositionedCard[], publishedBy?: string): Promise<void> {
+export async function publishLayout(cards: PositionedCard[], groupPositions?: GroupPosition[], publishedBy?: string): Promise<void> {
   try {
-    await api.post("/dashboard/layout/layout", { cards });
+    await api.post("/dashboard/layout/layout", { cards, groupPositions });
     
     // Also save to localStorage as backup
     const layout: PublishedLayout = {
       cards,
+      groupPositions,
       publishedAt: new Date().toISOString(),
       publishedBy,
     };

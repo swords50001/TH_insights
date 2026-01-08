@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { DashboardGrid, PositionedCard } from "../components/DashboardGrid";
+import { DashboardGrid, PositionedCard, GroupPosition } from "../components/DashboardGrid";
 import { getPublishedLayout } from "../publishedLayout";
 import { api } from "../api";
+import { FilterBar } from "../components/FilterBar";
 
 export function Dashboard() {
   const [cards, setCards] = useState<PositionedCard[]>([]);
+  const [groupPositions, setGroupPositions] = useState<GroupPosition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filterValues, setFilterValues] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -28,16 +31,25 @@ export function Dashboard() {
         const response = await api.get("/dashboard/cards");
         const freshCards = response.data;
         
+        console.log('Fresh cards from API:', freshCards);
+        
         // Merge published positions with fresh card data
         const mergedCards = published.cards.map(publishedCard => {
           const freshCard = freshCards.find((fc: any) => fc.id === publishedCard.id);
+          console.log('Merging card:', publishedCard.id, 'freshCard:', freshCard);
           return {
             ...publishedCard,
-            ...freshCard, // This will include drill-down fields
+            ...freshCard, // This will include drill-down fields and conditional_formatting
           };
         });
         
+        console.log('Merged cards with conditional_formatting:', mergedCards);
         setCards(mergedCards);
+        
+        // Load group positions
+        if (published.groupPositions) {
+          setGroupPositions(published.groupPositions);
+        }
       } catch (err: any) {
         console.error("Failed to load dashboard:", err);
         setError(err.message || "Failed to load dashboard");
@@ -48,6 +60,12 @@ export function Dashboard() {
 
     loadDashboard();
   }, []);
+
+  const handleFilterChange = (filters: Record<string, any>) => {
+    setFilterValues(filters);
+    // TODO: Apply filters to card data
+    console.log("Filter values changed:", filters);
+  };
 
   if (loading) {
     return (
@@ -80,10 +98,13 @@ export function Dashboard() {
   }
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: "24px", paddingTop: "16px" }}>
+      <FilterBar onFilterChange={handleFilterChange} />
       <DashboardGrid 
-        cards={cards} 
+        cards={cards}
+        groupPositions={groupPositions}
         readOnly={true}
+        filters={filterValues}
       />
     </div>
   );

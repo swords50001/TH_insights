@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { DashboardGrid, PositionedCard, Card } from "../components/DashboardGrid";
+import { DashboardGrid, PositionedCard, Card, GroupPosition } from "../components/DashboardGrid";
 import { api } from "../api";
 import { publishLayout, getPublishedLayout } from "../publishedLayout";
 
 export function AdminDashboard() {
   const [cards, setCards] = useState<PositionedCard[]>([]);
+  const [groupPositions, setGroupPositions] = useState<GroupPosition[]>([]);
   const [allCards, setAllCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +35,11 @@ export function AdminDashboard() {
             ...freshCard, // Merge in latest card data
           };
         });
+        
+        // Load group positions
+        if (published.groupPositions) {
+          setGroupPositions(published.groupPositions);
+        }
         
         // Add any new cards that aren't in the published layout
         const publishedIds = new Set(published.cards.map(c => c.id));
@@ -90,6 +96,32 @@ export function AdminDashboard() {
     }
   };
 
+  const handleGroupMoved = (groupName: string, x: number, y: number) => {
+    setGroupPositions((prev) => {
+      const existing = prev.find(p => p.groupName === groupName);
+      if (existing) {
+        return prev.map(p => 
+          p.groupName === groupName ? { ...p, x, y } : p
+        );
+      } else {
+        return [...prev, { groupName, x, y }];
+      }
+    });
+  };
+
+  const handleGroupResized = (groupName: string, width: number, height: number) => {
+    setGroupPositions((prev) => {
+      const existing = prev.find(p => p.groupName === groupName);
+      if (existing) {
+        return prev.map(p => 
+          p.groupName === groupName ? { ...p, width, height } : p
+        );
+      } else {
+        return [...prev, { groupName, x: 0, y: 0, width, height }];
+      }
+    });
+  };
+
   const handleAddCard = (card: Card) => {
     // Find a good position for the new card
     const maxY = cards.length > 0 ? Math.max(...cards.map(c => c.y + c.height)) : 0;
@@ -106,7 +138,35 @@ export function AdminDashboard() {
 
   const handlePublish = async () => {
     try {
-      await publishLayout(cards, "admin");
+      // Capture actual container dimensions from DOM before publishing
+      const groupNames = new Set<string>();
+      cards.forEach(card => {
+        if (card.group_name && card.group_name !== '__ungrouped__') {
+          groupNames.add(card.group_name);
+        }
+      });
+      
+      const updatedGroupPositions: GroupPosition[] = [];
+      
+      groupNames.forEach(groupName => {
+        const container = document.querySelector(`[data-group-name="${groupName}"]`) as HTMLElement;
+        if (container) {
+          // Find existing position or create new one
+          const existing = groupPositions.find(gp => gp.groupName === groupName);
+          const rect = container.getBoundingClientRect();
+          const parent = container.offsetParent as HTMLElement;
+          
+          updatedGroupPositions.push({
+            groupName,
+            x: existing?.x || container.offsetLeft,
+            y: existing?.y || container.offsetTop,
+            width: container.offsetWidth,
+            height: container.offsetHeight,
+          });
+        }
+      });
+      
+      await publishLayout(cards, updatedGroupPositions, "admin");
       setPublishSuccess(true);
       setTimeout(() => setPublishSuccess(false), 3000);
     } catch (err) {
@@ -225,11 +285,14 @@ export function AdminDashboard() {
         </div>
       </div>
       <DashboardGrid 
-        cards={cards} 
+        cards={cards}
+        groupPositions={groupPositions}
         readOnly={false}
         onCardMoved={handleCardMoved}
         onCardResized={handleCardResized}
         onCardRemoved={handleRemoveCard}
+        onGroupMoved={handleGroupMoved}
+        onGroupResized={handleGroupResized}
       />
       
       {/* Available Cards Modal */}

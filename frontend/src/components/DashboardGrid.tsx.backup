@@ -40,7 +40,6 @@ type DashboardGridProps = {
 	onCardRemoved?: (cardId: string) => void;
 	onGroupMoved?: (groupName: string, x: number, y: number) => void;
 	onGroupResized?: (groupName: string, width: number, height: number) => void;
-	filters?: Record<string, any>;
 };
 
 const GRID_SIZE = 12; // 12-column grid
@@ -52,14 +51,12 @@ function GridCard({
 	onMove,
 	onResize,
 	onRemove,
-	filters,
 }: {
 	card: PositionedCard;
 	readOnly?: boolean;
 	onMove?: (dx: number, dy: number) => void;
 	onResize?: (dw: number, dh: number) => void;
 	onRemove?: () => void;
-	filters?: Record<string, any>;
 }) {
 	const handleDragMove = (e: React.MouseEvent) => {
 		if (readOnly || !onMove) return;
@@ -182,7 +179,7 @@ function GridCard({
 
 			{/* Card content */}
 			<div style={{ flex: 1, overflow: "auto", padding: 12 }}>
-				<CardView card={card} filters={filters} />
+				<CardView card={card} />
 			</div>
 
 			{/* Resize handle */}
@@ -214,7 +211,6 @@ export function DashboardGrid({
 	onCardRemoved,
 	onGroupMoved,
 	onGroupResized,
-	filters = {},
 }: DashboardGridProps) {
 	const [cards, setCards] = useState<PositionedCard[]>(initialCards);
 	const [groupPositions, setGroupPositions] = useState<GroupPosition[]>(initialGroupPositions);
@@ -347,32 +343,21 @@ export function DashboardGrid({
 
 	// Calculate required height for the grid
 	const maxY = cards.reduce((max, card) => Math.max(max, card.y + card.height), 0);
-	
-	// Also account for absolute positioned groups
-	const maxGroupBottom = groupPositions.reduce((max, pos) => {
-		if (pos.y && pos.height) {
-			return Math.max(max, pos.y + pos.height);
-		}
-		return max;
-	}, 0);
-	
-	const calculatedHeight = Math.max((maxY + 2) * CELL_HEIGHT, maxGroupBottom + 100);
-	const gridHeight = `${calculatedHeight}px`;
+	const gridHeight = `${(maxY + 2) * CELL_HEIGHT}px`;
 
 	return (
 		<div
 			style={{
+				minHeight: "100vh",
 				background: "#f9fafb",
 				padding: 16,
 				boxSizing: "border-box",
-				minHeight: `${calculatedHeight + 32}px`,
 			}}
 		>
 			<div
 				style={{
 					position: "relative",
-					minHeight: gridHeight,
-					paddingBottom: "40px",
+					minHeight: "calc(100vh - 32px)",
 				}}
 			>
 			{sortedGroups.map(([groupName, group]) => {
@@ -408,31 +393,11 @@ export function DashboardGrid({
 					borderRadius: "8px",
 					boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
 				} : {}),
-		};
-		
-		return (
-			<div key={groupName} data-group-name={groupName} style={containerStyle}>
-				{/* Group Header */}
-				{groupName !== '__ungrouped__' && (
-					<div
-						onMouseDown={(e) => handleGroupDrag(groupName, e)}
-						style={{
-							background: group.headerBgColor,
-							color: group.headerTextColor,
-							padding: "16px 24px",
-							borderRadius: "8px 8px 0 0",
-							fontSize: 20,
-							fontWeight: 600,
-							marginBottom: 0,
-							boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-							cursor: readOnly ? "default" : "move",
-							userSelect: "none" as const,
-						}}
-					>
-						{groupName}
-					</div>
-				)}
-
+								}}
+							>
+								{groupName}
+							</div>
+						)}
 
 					{/* Group Container */}
 					<div
@@ -475,7 +440,6 @@ export function DashboardGrid({
 								onMove={(dx, dy) => updateCardPosition(card.id, dx, dy)}
 								onResize={(dw, dh) => updateCardSize(card.id, dw, dh)}
 								onRemove={onCardRemoved ? () => onCardRemoved(card.id) : undefined}
-								filters={filters}
 							/>
 						))}
 

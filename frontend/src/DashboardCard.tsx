@@ -4,6 +4,15 @@ import { DashboardCard as TotalCard } from "./components/DashboardCard";
 import { EnhancedTable } from "./components/EnhancedTable";
 import { ChartCard, ChartType } from "./components/ChartCard";
 
+// Type definition for conditional formatting rules
+export type ConditionalFormattingRule = {
+  column: string;
+  operator: "greater" | "less" | "equals" | "between";
+  value: number | number[];
+  bgColor: string;
+  textColor: string;
+};
+
 // Type definition for the card prop
 interface Card {
   id: string;
@@ -15,6 +24,7 @@ interface Card {
   hide_title?: boolean;
   font_size?: string;
   font_family?: string;
+  conditional_formatting?: ConditionalFormattingRule[];
 }
 
 // Type definition for data rows
@@ -22,9 +32,10 @@ type DataRow = Record<string, any>;
 
 interface DashboardCardProps {
   card: Card;
+  filters?: Record<string, any>;
 }
 
-export function DashboardCard({ card }: DashboardCardProps) {
+export function DashboardCard({ card, filters = {} }: DashboardCardProps) {
   const [data, setData] = useState<DataRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -34,6 +45,7 @@ export function DashboardCard({ card }: DashboardCardProps) {
     drilldown_enabled: card.drilldown_enabled, 
     drilldown_query: card.drilldown_query 
   });
+  console.log('Card conditional_formatting:', card.conditional_formatting);
 
   useEffect(() => {
     console.log('DashboardCard useEffect triggered for card:', card.id);
@@ -42,8 +54,11 @@ export function DashboardCard({ card }: DashboardCardProps) {
       setError(undefined);
       try {
         console.log('Fetching data for card:', card.id, card.visualization_type);
+        console.log('With filters:', filters);
         // Use POST /dashboard/cards/:id/data endpoint for both metrics and tables
-        const res = await api.post(`/dashboard/cards/${card.id}/data`);
+        const res = await api.post(`/dashboard/cards/${card.id}/data`, {
+          filters
+        });
         const rows = res.data || [];
         
         console.log('Received data for card', card.id, ':', rows);
@@ -65,7 +80,7 @@ export function DashboardCard({ card }: DashboardCardProps) {
       }
     };
     fetchData();
-  }, [card]);
+  }, [card, filters]);
 
   if (card.visualization_type === "metric") {
     const value = (data[0]?.value ?? null) as number | null;
@@ -118,6 +133,7 @@ export function DashboardCard({ card }: DashboardCardProps) {
       drilldownQuery={card.drilldown_query}
       fontSize={card.font_size}
       fontFamily={card.font_family}
+      conditionalFormatting={card.conditional_formatting}
     />
   );
 }

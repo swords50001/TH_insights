@@ -30,7 +30,7 @@ router.get("/layout", async (req: AuthRequest, res) => {
 router.post("/layout", async (req: AuthRequest, res) => {
   const tenant_id = req.user?.tenant_id || 'default';
   const user_id = req.user?.id;
-  const { cards } = req.body;
+  const { cards, groupPositions } = req.body;
   
   if (!cards || !Array.isArray(cards)) {
     return res.status(400).json({ error: "Invalid layout data" });
@@ -42,7 +42,12 @@ router.post("/layout", async (req: AuthRequest, res) => {
   }
   
   try {
-    const layout_data = { cards, publishedAt: new Date().toISOString(), publishedBy: user_id };
+    const layout_data = { 
+      cards, 
+      groupPositions: groupPositions || [],
+      publishedAt: new Date().toISOString(), 
+      publishedBy: user_id 
+    };
     
     // Upsert the layout
     const result = await pool.query(
