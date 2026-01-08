@@ -9,6 +9,7 @@ import { tenantResolver, getTenantConfig } from "./tenant";
 import { signToken } from "./auth";
 import adminRoutes from "./routes/admin.routes";
 import layoutRoutes from "./routes/layout.routes";
+import filterRoutes from "./routes/filter.routes";
 
 dotenv.config();
 
@@ -84,7 +85,7 @@ app.post("/auth/login", async (req: Request, res: Response) => {
 app.get("/dashboard/cards", auth, async (req: AuthRequest, res) => {
   const tenant_id = req.user?.tenant_id || 'default';
   const result = await pool.query(
-    "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family FROM dashboard_cards WHERE tenant_id = $1 ORDER BY id",
+    "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, group_name, group_order, header_bg_color, header_text_color FROM dashboard_cards WHERE tenant_id = $1 ORDER BY group_order, id",
     [tenant_id]
   );
   res.json(result.rows);
@@ -174,6 +175,7 @@ app.post("/dashboard/cards/:id/data", auth, async (req: AuthRequest, res) => {
 /* ---------------- ADMIN ROUTES ---------------- */
 
 app.use('/admin', adminRoutes);
+app.use('/admin', filterRoutes);
 
 /* ---------------- LAYOUT ROUTES ---------------- */
 

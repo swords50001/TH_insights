@@ -13,6 +13,14 @@ import { api } from "../api";
 
 type DataRow = Record<string, any>;
 
+export type ConditionalFormattingRule = {
+  column: string;
+  operator: "greater" | "less" | "equals" | "between";
+  value: number | number[];
+  bgColor: string;
+  textColor: string;
+};
+
 interface EnhancedTableProps {
   data: DataRow[];
   title: string;
@@ -21,9 +29,10 @@ interface EnhancedTableProps {
   drilldownQuery?: string;
   fontSize?: string;
   fontFamily?: string;
+  conditionalFormatting?: ConditionalFormattingRule[];
 }
 
-// Conditional formatting rules
+// Legacy conditional formatting type (kept for backwards compatibility)
 type ConditionalFormat = {
   type: "number" | "text";
   condition: "greater" | "less" | "equals" | "contains";
@@ -31,12 +40,9 @@ type ConditionalFormat = {
   style: React.CSSProperties;
 };
 
-export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldownQuery, fontSize, fontFamily }: EnhancedTableProps) {
+export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldownQuery, fontSize, fontFamily, conditionalFormatting: formattingRules }: EnhancedTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [conditionalFormatting, setConditionalFormatting] = useState<
-    Record<string, ConditionalFormat>
-  >({});
   const [drilldownData, setDrilldownData] = useState<DataRow[] | null>(null);
   const [drilldownLoading, setDrilldownLoading] = useState(false);
   const [drilldownError, setDrilldownError] = useState<string | null>(null);
@@ -57,7 +63,19 @@ export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldown
     return familyMap[family || "default"] || familyMap.default;
   };
 
+  // Map font size settings to CSS values for headers
+  const getHeaderFontSize = (size?: string) => {
+    const sizeMap: Record<string, string> = {
+      small: "12px",
+      medium: "14px",
+      large: "16px",
+      "x-large": "18px",
+    };
+    return sizeMap[size || "medium"] || "14px";
+  };
+
   const containerFontFamily = getFontFamily(fontFamily);
+  const headerFontSize = getHeaderFontSize(fontSize);
 
   console.log('EnhancedTable props:', { cardId, drilldownEnabled, drilldownQuery, dataLength: data?.length });
 
@@ -186,21 +204,22 @@ export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldown
       },
       cell: (info) => {
         const value = info.getValue();
-        const cellStyle: React.CSSProperties = {};
+        const cellStyle: React.CSSProperties = { padding: "8px" };
 
-        // Apply conditional formatting
-        const format = conditionalFormatting[key];
-        if (format) {
-          const shouldApply = applyConditionalFormat(value, format);
-          if (shouldApply) {
-            Object.assign(cellStyle, format.style);
+        // Apply conditional formatting rules
+        if (formattingRules && formattingRules.length > 0) {
+          const rule = formattingRules.find(r => r.column === key);
+          if (rule && shouldApplyRule(value, rule)) {
+            cellStyle.backgroundColor = rule.bgColor;
+            cellStyle.color = rule.textColor;
+            cellStyle.fontWeight = "500";
           }
         }
 
         return <div style={cellStyle}>{String(value)}</div>;
       },
     }));
-  }, [data, conditionalFormatting]);
+  }, [data, formattingRules]);
 
   const table = useReactTable({
     data,
@@ -282,6 +301,8 @@ export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldown
                       borderBottom: "2px solid #e5e7eb",
                       color: "#374151",
                       background: "#f9fafb",
+                      fontSize: headerFontSize,
+                      fontWeight: 600,
                     }}
                   >
                     {flexRender(
@@ -461,36 +482,26 @@ export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldown
 }
 
 // Helper function to apply conditional formatting
-function applyConditionalFormat(
+function shouldApplyRule(
   value: any,
-  format: ConditionalFormat
+  rule: ConditionalFormattingRule
 ): boolean {
-  if (format.type === "number") {
-    const numValue = Number(value);
-    const numThreshold = Number(format.value);
-    if (isNaN(numValue) || isNaN(numThreshold)) return false;
+  const numValue = Number(value);
+  if (isNaN(numValue)) return false;
 
-    switch (format.condition) {
-      case "greater":
-        return numValue > numThreshold;
-      case "less":
-        return numValue < numThreshold;
-      case "equals":
-        return numValue === numThreshold;
-      default:
-        return false;
-    }
-  } else {
-    const strValue = String(value).toLowerCase();
-    const strThreshold = String(format.value).toLowerCase();
-
-    switch (format.condition) {
-      case "contains":
-        return strValue.includes(strThreshold);
-      case "equals":
-        return strValue === strThreshold;
-      default:
-        return false;
-    }
+  switch (rule.operator) {
+    case "greater":
+      return numValue > (rule.value as number);
+    case "less":
+      return numValue < (rule.value as number);
+    case "equals":
+      return numValue === (rule.value as number);
+    case "between":
+      if (Array.isArray(rule.value) && rule.value.length === 2) {
+        return numValue >= rule.value[0] && numValue <= rule.value[1];
+      }
+      return false;
+    default:
+      return false;
   }
 }

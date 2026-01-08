@@ -68,7 +68,19 @@ export function ChartCard({ data, chartType = "bar", title, fontSize, fontFamily
     return familyMap[family || "default"] || familyMap.default;
   };
 
+  // Map font size settings to CSS values for chart labels
+  const getLabelFontSize = (size?: string) => {
+    const sizeMap: Record<string, number> = {
+      small: 10,
+      medium: 12,
+      large: 14,
+      "x-large": 16,
+    };
+    return sizeMap[size || "medium"] || 12;
+  };
+
   const containerFontFamily = getFontFamily(fontFamily);
+  const labelFontSize = getLabelFontSize(fontSize);
 
   // Normalize data - convert string numbers to actual numbers
   const normalizedData = data.map(row => {
@@ -112,17 +124,17 @@ export function ChartCard({ data, chartType = "bar", title, fontSize, fontFamily
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={normalizedData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey={xAxisKey} stroke="#6b7280" style={{ fontSize: 12 }} />
-              <YAxis stroke="#6b7280" style={{ fontSize: 12 }} />
+              <XAxis dataKey={xAxisKey} stroke="#6b7280" style={{ fontSize: labelFontSize }} />
+              <YAxis stroke="#6b7280" style={{ fontSize: labelFontSize }} />
               <Tooltip 
                 contentStyle={{ 
                   background: "#fff", 
                   border: "1px solid #e5e7eb",
                   borderRadius: 6,
-                  fontSize: 12
+                  fontSize: labelFontSize
                 }} 
               />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: labelFontSize }} />
               {yAxisKeys.map((key, i) => (
                 <Line
                   key={key}
@@ -143,17 +155,17 @@ export function ChartCard({ data, chartType = "bar", title, fontSize, fontFamily
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={normalizedData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey={xAxisKey} stroke="#6b7280" style={{ fontSize: 12 }} />
-              <YAxis stroke="#6b7280" style={{ fontSize: 12 }} />
+              <XAxis dataKey={xAxisKey} stroke="#6b7280" style={{ fontSize: labelFontSize }} />
+              <YAxis stroke="#6b7280" style={{ fontSize: labelFontSize }} />
               <Tooltip 
                 contentStyle={{ 
                   background: "#fff", 
                   border: "1px solid #e5e7eb",
                   borderRadius: 6,
-                  fontSize: 12
+                  fontSize: labelFontSize
                 }} 
               />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: labelFontSize }} />
               {yAxisKeys.map((key, i) => (
                 <Bar
                   key={key}
@@ -183,7 +195,7 @@ export function ChartCard({ data, chartType = "bar", title, fontSize, fontFamily
                 outerRadius="65%"
                 innerRadius="0%"
                 label={(entry) => `${entry[xAxisKey]}: ${entry[valueKey]}`}
-                style={{ fontSize: 11 }}
+                style={{ fontSize: labelFontSize }}
               >
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -194,10 +206,10 @@ export function ChartCard({ data, chartType = "bar", title, fontSize, fontFamily
                   background: "#fff", 
                   border: "1px solid #e5e7eb",
                   borderRadius: 6,
-                  fontSize: 12
+                  fontSize: labelFontSize
                 }} 
               />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: labelFontSize }} />
             </PieChart>
           </ResponsiveContainer>
         );
@@ -207,17 +219,17 @@ export function ChartCard({ data, chartType = "bar", title, fontSize, fontFamily
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={normalizedData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey={xAxisKey} stroke="#6b7280" style={{ fontSize: 12 }} />
-              <YAxis stroke="#6b7280" style={{ fontSize: 12 }} />
+              <XAxis dataKey={xAxisKey} stroke="#6b7280" style={{ fontSize: labelFontSize }} />
+              <YAxis stroke="#6b7280" style={{ fontSize: labelFontSize }} />
               <Tooltip 
                 contentStyle={{ 
                   background: "#fff", 
                   border: "1px solid #e5e7eb",
                   borderRadius: 6,
-                  fontSize: 12
+                  fontSize: labelFontSize
                 }} 
               />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: labelFontSize }} />
               {yAxisKeys.map((key, i) => (
                 <Area
                   key={key}

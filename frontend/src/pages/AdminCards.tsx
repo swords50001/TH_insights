@@ -15,8 +15,21 @@ interface Card {
   hide_title?: boolean;
   font_size?: string;
   font_family?: string;
+  group_name?: string;
+  group_order?: number;
+  header_bg_color?: string;
+  header_text_color?: string;
+  conditional_formatting?: ConditionalFormattingRule[];
   is_active: boolean;
 }
+
+type ConditionalFormattingRule = {
+  column: string;
+  operator: "greater" | "less" | "equals" | "between";
+  value: number | number[];
+  bgColor: string;
+  textColor: string;
+};
 
 export default function AdminCards() {
   const [cards, setCards] = useState<Card[]>([]);
@@ -112,6 +125,13 @@ export default function AdminCards() {
       drilldown_enabled: card.drilldown_enabled,
       drilldown_query: card.drilldown_query,
       hide_title: card.hide_title,
+      font_size: card.font_size,
+      font_family: card.font_family,
+      group_name: card.group_name,
+      group_order: card.group_order,
+      header_bg_color: card.header_bg_color,
+      header_text_color: card.header_text_color,
+      conditional_formatting: card.conditional_formatting,
       is_active: card.is_active,
     });
   };
@@ -341,6 +361,110 @@ export default function AdminCards() {
             </div>
           </div>
 
+          {/* Card Grouping */}
+          <div style={{ padding: 16, background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#374151" }}>
+              Card Grouping
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
+                  Group Name
+                </label>
+                <input
+                  type="text"
+                  value={form.group_name || ""}
+                  placeholder="e.g., Revenue Metrics, Customer Data (leave empty for no group)"
+                  onChange={e => setForm({ ...form, group_name: e.target.value || undefined })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 6,
+                    fontSize: 14,
+                  }}
+                />
+                <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
+                  Cards with the same group name will be displayed together
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
+                  Group Order
+                </label>
+                <input
+                  type="number"
+                  value={form.group_order ?? 0}
+                  onChange={e => setForm({ ...form, group_order: parseInt(e.target.value) || 0 })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 6,
+                    fontSize: 14,
+                  }}
+                  min="0"
+                />
+                <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
+                  Lower numbers appear first
+                </div>
+              </div>
+            </div>
+
+            {/* Group Header Customization */}
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "#374151" }}>
+                Group Header Colors
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
+                    Header Background
+                  </label>
+                  <input
+                    type="text"
+                    value={form.header_bg_color || ""}
+                    placeholder="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                    onChange={e => setForm({ ...form, header_bg_color: e.target.value || undefined })}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 6,
+                      fontSize: 14,
+                    }}
+                  />
+                  <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
+                    CSS color or gradient (e.g., #3b82f6 or linear-gradient(...))
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
+                    Header Text Color
+                  </label>
+                  <input
+                    type="text"
+                    value={form.header_text_color || ""}
+                    placeholder="#ffffff"
+                    onChange={e => setForm({ ...form, header_text_color: e.target.value || undefined })}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 6,
+                      fontSize: 14,
+                    }}
+                  />
+                  <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
+                    CSS color (e.g., #ffffff or white)
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Drill-down configuration for table cards */}
           {form.visualization_type === "table" && (
             <div style={{ marginTop: 16, padding: 16, background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
@@ -381,6 +505,226 @@ export default function AdminCards() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Conditional Formatting for table cards */}
+          {form.visualization_type === "table" && (
+            <div style={{ marginTop: 16, padding: 16, background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#374151" }}>
+                Conditional Formatting
+                <span style={{ fontSize: 12, fontWeight: 400, color: "#6b7280", marginLeft: 8 }}>
+                  (Highlight cells based on their values)
+                </span>
+              </div>
+              
+              {(form.conditional_formatting || []).map((rule, index) => (
+                <div key={index} style={{ 
+                  padding: 12, 
+                  background: "#fff", 
+                  borderRadius: 6, 
+                  border: "1px solid #e5e7eb",
+                  marginBottom: 12 
+                }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr 1fr 1fr", gap: 8, alignItems: "end" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4 }}>
+                        Column
+                      </label>
+                      <input
+                        type="text"
+                        value={rule.column}
+                        onChange={e => {
+                          const newRules = [...(form.conditional_formatting || [])];
+                          newRules[index] = { ...rule, column: e.target.value };
+                          setForm({ ...form, conditional_formatting: newRules });
+                        }}
+                        placeholder="column_name"
+                        style={{
+                          width: "100%",
+                          padding: "6px 8px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: 4,
+                          fontSize: 13,
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4 }}>
+                        Operator
+                      </label>
+                      <select
+                        value={rule.operator}
+                        onChange={e => {
+                          const newRules = [...(form.conditional_formatting || [])];
+                          newRules[index] = { ...rule, operator: e.target.value as any };
+                          setForm({ ...form, conditional_formatting: newRules });
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "6px 8px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: 4,
+                          fontSize: 13,
+                        }}
+                      >
+                        <option value="greater">Greater than</option>
+                        <option value="less">Less than</option>
+                        <option value="equals">Equals</option>
+                        <option value="between">Between</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4 }}>
+                        Value{rule.operator === "between" ? "s (min,max)" : ""}
+                      </label>
+                      <input
+                        type="text"
+                        value={Array.isArray(rule.value) ? rule.value.join(",") : rule.value}
+                        onChange={e => {
+                          const newRules = [...(form.conditional_formatting || [])];
+                          const val = rule.operator === "between" 
+                            ? e.target.value.split(",").map(v => parseFloat(v.trim())).filter(v => !isNaN(v))
+                            : parseFloat(e.target.value);
+                          newRules[index] = { ...rule, value: val };
+                          setForm({ ...form, conditional_formatting: newRules });
+                        }}
+                        placeholder={rule.operator === "between" ? "10,20" : "10"}
+                        style={{
+                          width: "100%",
+                          padding: "6px 8px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: 4,
+                          fontSize: 13,
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4 }}>
+                        BG Color
+                      </label>
+                      <input
+                        type="color"
+                        value={rule.bgColor}
+                        onChange={e => {
+                          const newRules = [...(form.conditional_formatting || [])];
+                          newRules[index] = { ...rule, bgColor: e.target.value };
+                          setForm({ ...form, conditional_formatting: newRules });
+                        }}
+                        style={{
+                          width: "100%",
+                          height: "32px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: 4,
+                          cursor: "pointer",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4 }}>
+                        Text Color
+                      </label>
+                      <input
+                        type="color"
+                        value={rule.textColor}
+                        onChange={e => {
+                          const newRules = [...(form.conditional_formatting || [])];
+                          newRules[index] = { ...rule, textColor: e.target.value };
+                          setForm({ ...form, conditional_formatting: newRules });
+                        }}
+                        style={{
+                          width: "100%",
+                          height: "32px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: 4,
+                          cursor: "pointer",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const newRules = (form.conditional_formatting || []).filter((_, i) => i !== index);
+                      setForm({ ...form, conditional_formatting: newRules.length > 0 ? newRules : undefined });
+                    }}
+                    style={{
+                      marginTop: 8,
+                      padding: "4px 12px",
+                      background: "#ef4444",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Remove Rule
+                  </button>
+                </div>
+              ))}
+
+              <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+                <button
+                  onClick={() => {
+                    const newRule: ConditionalFormattingRule = {
+                      column: "",
+                      operator: "greater",
+                      value: 0,
+                      bgColor: "#fef3c7",
+                      textColor: "#92400e",
+                    };
+                    setForm({ 
+                      ...form, 
+                      conditional_formatting: [...(form.conditional_formatting || []), newRule] 
+                    });
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    background: "#3b82f6",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 4,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                  }}
+                >
+                  + Add Formatting Rule
+                </button>
+
+                {editingCard && (
+                  <button
+                    onClick={() => {
+                      api.put(`/admin/cards/${editingCard.id}`, {
+                        ...editingCard,
+                        conditional_formatting: form.conditional_formatting
+                      }).then(() => {
+                        alert('Conditional formatting saved successfully!');
+                        load();
+                      }).catch(err => {
+                        alert('Failed to save conditional formatting: ' + (err.response?.data?.error || err.message));
+                      });
+                    }}
+                    style={{
+                      padding: "8px 16px",
+                      background: "#10b981",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 4,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    💾 Save Formatting Rules
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -498,7 +842,11 @@ export default function AdminCards() {
               ) : (
                 // Table Preview with Enhanced Features
                 <div style={{ height: 400 }}>
-                  <EnhancedTable data={previewData} title="Preview Results" />
+                  <EnhancedTable 
+                    data={previewData} 
+                    title="Preview Results"
+                    conditionalFormatting={form.conditional_formatting}
+                  />
                 </div>
               )}
             </>
