@@ -10,6 +10,7 @@ import { signToken } from "./auth";
 import adminRoutes from "./routes/admin.routes";
 import layoutRoutes from "./routes/layout.routes";
 import filterRoutes from "./routes/filter.routes";
+import dashboardTabsRoutes from "./routes/dashboard-tabs.routes";
 
 dotenv.config();
 
@@ -85,7 +86,7 @@ app.post("/auth/login", async (req: Request, res: Response) => {
 app.get("/dashboard/cards", auth, async (req: AuthRequest, res) => {
   const tenant_id = req.user?.tenant_id || 'default';
   const result = await pool.query(
-    "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, group_name, group_order, header_bg_color, header_text_color FROM dashboard_cards WHERE tenant_id = $1 ORDER BY group_order, id",
+    "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config FROM dashboard_cards WHERE tenant_id = $1 ORDER BY group_order, id",
     [tenant_id]
   );
   res.json(result.rows);
@@ -127,7 +128,7 @@ app.post("/dashboard/cards/:id/data", auth, async (req: AuthRequest, res) => {
   const tenant_id = req.user?.tenant_id || 'default';
 
   const cardResult = await pool.query(
-    "SELECT sql_query FROM dashboard_cards WHERE id = $1 AND tenant_id = $2",
+    "SELECT sql_query, pivot_enabled, pivot_config FROM dashboard_cards WHERE id = $1 AND tenant_id = $2",
     [id, tenant_id]
   );
 
@@ -136,6 +137,13 @@ app.post("/dashboard/cards/:id/data", auth, async (req: AuthRequest, res) => {
   }
 
   let sql = cardResult.rows[0].sql_query as string;
+  const pivotEnabled = cardResult.rows[0].pivot_enabled;
+  const pivotConfig = cardResult.rows[0].pivot_config;
+
+  console.log('=== CARD DATA REQUEST ===');
+  console.log('Card ID:', id);
+  console.log('Pivot enabled:', pivotEnabled);
+  console.log('Pivot config:', pivotConfig);
 
   if (!sql || typeof sql !== "string") {
     return res.status(500).json({ error: "Invalid SQL for card" });
@@ -165,6 +173,21 @@ app.post("/dashboard/cards/:id/data", auth, async (req: AuthRequest, res) => {
     // Execute the query but cap returned rows by wrapping in a subselect with LIMIT to avoid huge responses.
     const wrapped = `SELECT * FROM (${sql}) AS subquery LIMIT ${MAX_ROWS}`;
     const data = await pool.query(wrapped);
+    
+    // Apply pivot transformation if enabled
+    if (pivotEnabled && pivotConfig) {
+      console.log('Applying pivot transformation...');
+      const pivotedData = transformToPivot(data.rows, pivotConfig);
+      console.log('Pivot result:', pivotedData.length, 'rows');
+      
+      // Return both pivoted data and raw data for drill-down
+      return res.json({
+        data: pivotedData,
+        rawData: data.rows,
+        pivotConfig: pivotConfig
+      });
+    }
+    
     res.json(data.rows);
   } catch (err: any) {
     console.error("Error executing card SQL", err);
@@ -172,10 +195,90 @@ app.post("/dashboard/cards/:id/data", auth, async (req: AuthRequest, res) => {
   }
 });
 
+// Helper function to transform data into pivot table format
+function transformToPivot(
+  data: any[], 
+  config: { 
+    rowFields: string[]; 
+    columnFields: string[]; 
+    valueField: string; 
+    aggregation: 'sum' | 'avg' | 'count' | 'min' | 'max' 
+  }
+): any[] {
+  if (!data.length) return [];
+  
+  const { rowFields, columnFields, valueField, aggregation } = config;
+  
+  // Group data by row and column combinations
+  const pivotMap = new Map<string, Map<string, number[]>>();
+  
+  data.forEach(row => {
+    const rowKey = rowFields.map(f => row[f] || '').join('|||');
+    const colKey = columnFields.map(f => row[f] || '').join('|||');
+    const value = parseFloat(row[valueField]) || 0;
+    
+    if (!pivotMap.has(rowKey)) {
+      pivotMap.set(rowKey, new Map());
+    }
+    
+    const colMap = pivotMap.get(rowKey)!;
+    if (!colMap.has(colKey)) {
+      colMap.set(colKey, []);
+    }
+    
+    colMap.get(colKey)!.push(value);
+  });
+  
+  // Get all unique column values
+  const allColumns = new Set<string>();
+  pivotMap.forEach(colMap => {
+    colMap.forEach((_, colKey) => allColumns.add(colKey));
+  });
+  
+  // Aggregate function
+  const aggregate = (values: number[]): number => {
+    if (!values.length) return 0;
+    switch (aggregation) {
+      case 'sum': return values.reduce((a, b) => a + b, 0);
+      case 'avg': return values.reduce((a, b) => a + b, 0) / values.length;
+      case 'count': return values.length;
+      case 'min': return Math.min(...values);
+      case 'max': return Math.max(...values);
+      default: return 0;
+    }
+  };
+  
+  // Build result array
+  const result: any[] = [];
+  
+  pivotMap.forEach((colMap, rowKey) => {
+    const rowParts = rowKey.split('|||');
+    const resultRow: any = {};
+    
+    // Add row field values
+    rowFields.forEach((field, i) => {
+      resultRow[field] = rowParts[i];
+    });
+    
+    // Add aggregated values for each column
+    allColumns.forEach(colKey => {
+      const values = colMap.get(colKey) || [];
+      const colParts = colKey.split('|||');
+      const colLabel = columnFields.map((f, i) => `${f}:${colParts[i]}`).join(' ');
+      resultRow[colLabel] = aggregate(values);
+    });
+    
+    result.push(resultRow);
+  });
+  
+  return result;
+}
+
 /* ---------------- ADMIN ROUTES ---------------- */
 
 app.use('/admin', adminRoutes);
 app.use('/admin', filterRoutes);
+app.use('/admin/dashboards', dashboardTabsRoutes);
 
 /* ---------------- LAYOUT ROUTES ---------------- */
 
@@ -194,8 +297,44 @@ app.get('/tenant/config', (_req, res) => {
 
 /* ---------------- HEALTH ---------------- */
 
+/* ---------------- HEALTH CHECK ENDPOINTS ---------------- */
+
+// Basic health check for ALB
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Detailed health check with database connection
+app.get("/health/detailed", async (_req, res) => {
+  try {
+    // Check database connection
+    const dbCheck = await pool.query("SELECT NOW()");
+    
+    res.status(200).json({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      database: "connected",
+      uptime: process.uptime(),
+      dbTime: dbCheck.rows[0].now,
+    });
+  } catch (err) {
+    res.status(503).json({
+      status: "unhealthy",
+      timestamp: new Date().toISOString(),
+      database: "disconnected",
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+});
+
+// Readiness check for Kubernetes/ECS
+app.get("/ready", async (_req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.status(200).json({ ready: true });
+  } catch (err) {
+    res.status(503).json({ ready: false });
+  }
 });
 
 /* ---------------- START SERVER ---------------- */

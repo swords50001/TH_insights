@@ -1,0 +1,32 @@
+# Terraform State Files
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfvars
+terraform/crash.log
+terraform/override.tf
+terraform/override.tf.json
+terraform/*_override.tf
+terraform/*_override.tf.json
+
+# Environment Files (Production)
+backend/.env.production
+frontend/.env.production
+.env.production
+*.env.production
+
+# AWS Credentials
+.aws/
+aws-credentials.json
+
+# Deployment Logs
+deployment-*.log
+migrate-*.log
+
+# Backup Files
+*.backup
+*.bak
+
+# Terraform State Backup
+.terraform.tfstate.lock.info

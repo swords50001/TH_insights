@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { DashboardGrid, PositionedCard, Card, GroupPosition } from "../components/DashboardGrid";
+import { DashboardTabs, DashboardTab } from "../components/DashboardTabs";
+import { TabManager } from "../components/TabManager";
 import { api } from "../api";
 import { publishLayout, getPublishedLayout } from "../publishedLayout";
 
 export function AdminDashboard() {
+  const [tabs, setTabs] = useState<DashboardTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<number | null>(null);
   const [cards, setCards] = useState<PositionedCard[]>([]);
   const [groupPositions, setGroupPositions] = useState<GroupPosition[]>([]);
   const [allCards, setAllCards] = useState<Card[]>([]);
@@ -11,8 +15,69 @@ export function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [publishSuccess, setPublishSuccess] = useState(false);
   const [showAvailableCards, setShowAvailableCards] = useState(false);
+  const [showTabManager, setShowTabManager] = useState(false);
+
+  // Load dashboard tabs
+  const loadTabs = async () => {
+    try {
+      const response = await api.get("/admin/dashboards");
+      const dashboardTabs = response.data as DashboardTab[];
+      setTabs(dashboardTabs);
+      
+      // Get the most recently published dashboard from backend
+      if (dashboardTabs.length > 0 && !activeTabId) {
+        try {
+          const recentResponse = await api.get("/admin/dashboards/most-recent-published");
+          const recentDashboardId = recentResponse.data?.dashboard_id;
+          
+          if (recentDashboardId && dashboardTabs.find(t => t.id === recentDashboardId)) {
+            setActiveTabId(recentDashboardId);
+          } else {
+            // Fallback to first tab if no published dashboard found
+            setActiveTabId(dashboardTabs[0].id);
+          }
+        } catch (err) {
+          // Fallback to first tab if API fails
+          setActiveTabId(dashboardTabs[0].id);
+        }
+      } else if (dashboardTabs.length > 0 && !dashboardTabs.find(t => t.id === activeTabId)) {
+        // If current active tab doesn't exist, fall back to first
+        setActiveTabId(dashboardTabs[0].id);
+      }
+    } catch (err: any) {
+      console.error("Failed to load dashboard tabs:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadTabs();
+  }, []);
+
+  const handleReorderTabs = async (reorderedTabs: DashboardTab[]) => {
+    try {
+      // Update all tab orders in backend
+      await Promise.all(
+        reorderedTabs.map((tab) =>
+          api.put(`/admin/dashboards/${tab.id}`, {
+            name: tab.name,
+            description: tab.description,
+            tab_order: tab.tab_order,
+            icon: tab.icon,
+            color: tab.color,
+            is_active: true,
+          })
+        )
+      );
+      setTabs(reorderedTabs);
+    } catch (err: any) {
+      console.error("Failed to reorder tabs:", err);
+      alert("Failed to reorder tabs");
+    }
+  };
 
   const loadDashboard = async () => {
+    if (!activeTabId) return;
+    
     try {
       setLoading(true);
       
@@ -21,8 +86,8 @@ export function AdminDashboard() {
       const fetchedCards: Card[] = response.data;
       setAllCards(fetchedCards);
 
-      // Try to load the published layout first
-      const published = await getPublishedLayout();
+      // Try to load the published layout first for this dashboard
+      const published = await getPublishedLayout(activeTabId);
       
       let positionedCards: PositionedCard[];
       
@@ -40,29 +105,10 @@ export function AdminDashboard() {
         if (published.groupPositions) {
           setGroupPositions(published.groupPositions);
         }
-        
-        // Add any new cards that aren't in the published layout
-        const publishedIds = new Set(published.cards.map(c => c.id));
-        const newCards = fetchedCards.filter(fc => !publishedIds.has(fc.id));
-        
-        newCards.forEach((card, index) => {
-          positionedCards.push({
-            ...card,
-            x: (index % 3) * 4,
-            y: Math.floor(index / 3) * 2,
-            width: 4,
-            height: 2,
-          });
-        });
       } else {
-        // No published layout exists, use default positioning
-        positionedCards = fetchedCards.map((card, index) => ({
-          ...card,
-          x: (index % 3) * 4,
-          y: Math.floor(index / 3) * 2,
-          width: 4,
-          height: 2,
-        }));
+        // No published layout exists - start with empty dashboard
+        // User must explicitly add cards via "Add Card" button
+        positionedCards = [];
       }
 
       setCards(positionedCards);
@@ -75,8 +121,10 @@ export function AdminDashboard() {
   };
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+    if (activeTabId) {
+      loadDashboard();
+    }
+  }, [activeTabId]);
 
   const handleCardMoved = (cardId: string, x: number, y: number) => {
     setCards((prev) =>
@@ -166,7 +214,7 @@ export function AdminDashboard() {
         }
       });
       
-      await publishLayout(cards, updatedGroupPositions, "admin");
+      await publishLayout(cards, updatedGroupPositions, "admin", activeTabId);
       setPublishSuccess(true);
       setTimeout(() => setPublishSuccess(false), 3000);
     } catch (err) {
@@ -221,7 +269,36 @@ export function AdminDashboard() {
   }
 
   return (
-    <div>
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      {/* Dashboard Tabs */}
+      {tabs.length > 0 && activeTabId && (
+        <div style={{ display: "flex", borderBottom: "2px solid #e5e7eb", backgroundColor: "#f9fafb" }}>
+          <DashboardTabs
+            tabs={tabs}
+            activeTabId={activeTabId}
+            onTabChange={setActiveTabId}
+            onReorder={handleReorderTabs}
+            isAdmin={true}
+          />
+          <button
+            onClick={() => setShowTabManager(!showTabManager)}
+            style={{
+              padding: "8px 16px",
+              fontSize: 13,
+              border: "none",
+              background: "transparent",
+              color: "#6b7280",
+              cursor: "pointer",
+              marginLeft: "auto",
+              marginRight: 24,
+            }}
+          >
+            ⚙️ Manage Tabs
+          </button>
+        </div>
+      )}
+      
+      {/* Admin Header */}
       <div style={{
         padding: "16px",
         background: "#f3f4f6",
@@ -385,6 +462,19 @@ export function AdminDashboard() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Tab Manager Modal */}
+      {showTabManager && (
+        <TabManager
+          tabs={tabs}
+          activeTabId={activeTabId || 0}
+          onClose={() => setShowTabManager(false)}
+          onUpdate={() => {
+            loadTabs();
+            loadDashboard();
+          }}
+        />
       )}
     </div>
   );

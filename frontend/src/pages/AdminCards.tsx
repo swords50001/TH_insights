@@ -2,13 +2,86 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { EnhancedTable } from "../components/EnhancedTable";
 import { ChartCard } from "../components/ChartCard";
+import { PivotTable } from "../components/PivotTable";
+
+// Helper function to transform data into pivot table format
+function transformToPivot(
+  data: any[],
+  config: {
+    rowFields: string[];
+    columnFields: string[];
+    valueField: string;
+    aggregation: 'sum' | 'avg' | 'count' | 'min' | 'max';
+  }
+): any[] {
+  if (!data.length) return [];
+
+  const { rowFields, columnFields, valueField, aggregation } = config;
+  const pivotMap = new Map<string, Map<string, number[]>>();
+
+  data.forEach(row => {
+    const rowKey = rowFields.map(f => row[f] || '').join('|||');
+    const colKey = columnFields.map(f => row[f] || '').join('|||');
+    const value = parseFloat(row[valueField]) || 0;
+
+    if (!pivotMap.has(rowKey)) {
+      pivotMap.set(rowKey, new Map());
+    }
+
+    const colMap = pivotMap.get(rowKey)!;
+    if (!colMap.has(colKey)) {
+      colMap.set(colKey, []);
+    }
+
+    colMap.get(colKey)!.push(value);
+  });
+
+  const allColumns = new Set<string>();
+  pivotMap.forEach(colMap => {
+    colMap.forEach((_, colKey) => allColumns.add(colKey));
+  });
+
+  const aggregate = (values: number[]): number => {
+    if (!values.length) return 0;
+    switch (aggregation) {
+      case 'sum': return values.reduce((a, b) => a + b, 0);
+      case 'avg': return values.reduce((a, b) => a + b, 0) / values.length;
+      case 'count': return values.length;
+      case 'min': return Math.min(...values);
+      case 'max': return Math.max(...values);
+      default: return 0;
+    }
+  };
+
+  const result: any[] = [];
+
+  pivotMap.forEach((colMap, rowKey) => {
+    const rowParts = rowKey.split('|||');
+    const resultRow: any = {};
+
+    rowFields.forEach((field, i) => {
+      resultRow[field] = rowParts[i];
+    });
+
+    allColumns.forEach(colKey => {
+      const values = colMap.get(colKey) || [];
+      const colParts = colKey.split('|||');
+      const colLabel = columnFields.map((f, i) => `${f}:${colParts[i]}`).join(' ');
+      resultRow[colLabel] = aggregate(values);
+    });
+
+    result.push(resultRow);
+  });
+
+  return result;
+}
 
 interface Card {
   id: string;
   title: string;
   description?: string;
   sql_query: string;
-  visualization_type: "metric" | "table" | "chart";
+  visualization_type: "metric" | "table" | "chart" | "pivot";
   chart_type?: "line" | "bar" | "pie" | "area";
   drilldown_enabled?: boolean;
   drilldown_query?: string;
@@ -20,6 +93,13 @@ interface Card {
   header_bg_color?: string;
   header_text_color?: string;
   conditional_formatting?: ConditionalFormattingRule[];
+  pivot_enabled?: boolean;
+  pivot_config?: {
+    rowFields: string[];
+    columnFields: string[];
+    valueField: string;
+    aggregation: "sum" | "avg" | "count" | "min" | "max";
+  };
   is_active: boolean;
 }
 
@@ -99,15 +179,29 @@ export default function AdminCards() {
   };
 
   const save = () => {
+    // Ensure pivot_enabled is set to true when visualization_type is "pivot"
+    // Clean up pivot config by removing empty strings from arrays
+    const cleanedPivotConfig = form.pivot_config ? {
+      ...form.pivot_config,
+      rowFields: (form.pivot_config.rowFields || []).filter(f => f.length > 0),
+      columnFields: (form.pivot_config.columnFields || []).filter(f => f.length > 0),
+    } : undefined;
+    
+    const dataToSave = {
+      ...form,
+      pivot_enabled: form.visualization_type === "pivot" ? true : form.pivot_enabled,
+      pivot_config: cleanedPivotConfig,
+    };
+    
     if (editingCard) {
       // Update existing card
-      api.put(`/admin/cards/${editingCard.id}`, form).then(() => {
+      api.put(`/admin/cards/${editingCard.id}`, dataToSave).then(() => {
         resetForm();
         load();
       });
     } else {
       // Create new card
-      api.post("/admin/cards", form).then(() => {
+      api.post("/admin/cards", dataToSave).then(() => {
         resetForm();
         load();
       });
@@ -132,6 +226,8 @@ export default function AdminCards() {
       header_bg_color: card.header_bg_color,
       header_text_color: card.header_text_color,
       conditional_formatting: card.conditional_formatting,
+      pivot_enabled: card.pivot_enabled,
+      pivot_config: card.pivot_config,
       is_active: card.is_active,
     });
   };
@@ -226,7 +322,7 @@ export default function AdminCards() {
               </label>
               <select
                 value={form.visualization_type}
-                onChange={e => setForm({ ...form, visualization_type: e.target.value as "metric" | "table" | "chart" })}
+                onChange={e => setForm({ ...form, visualization_type: e.target.value as "metric" | "table" | "chart" | "pivot" })}
                 style={{
                   width: "100%",
                   padding: "8px 12px",
@@ -239,6 +335,7 @@ export default function AdminCards() {
                 <option value="metric">Metric (single number)</option>
                 <option value="table">Table (rows of data)</option>
                 <option value="chart">Chart (graph/visualization)</option>
+                <option value="pivot">Pivot Table (grouped data)</option>
               </select>
             </div>
 
@@ -508,8 +605,138 @@ export default function AdminCards() {
             </div>
           )}
 
-          {/* Conditional Formatting for table cards */}
-          {form.visualization_type === "table" && (
+          {/* Pivot Table Configuration */}
+          {form.visualization_type === "pivot" && (
+            <div style={{ marginTop: 16, padding: 16, background: "#f0f9ff", borderRadius: 6, border: "1px solid #bfdbfe" }}>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#1e40af" }}>
+                Pivot Table Configuration
+              </div>
+              
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Row Fields (comma-separated)</label>
+                <input
+                  type="text"
+                  value={(form.pivot_config?.rowFields || []).join(", ")}
+                  onChange={e => {
+                    const value = e.target.value;
+                    // Only split and filter when there's actual content, preserve raw input during typing
+                    const fields = value.length > 0 ? value.split(",").map(s => s.trim()) : [];
+                    setForm({ 
+                      ...form, 
+                      pivot_enabled: true,
+                      pivot_config: { 
+                        ...(form.pivot_config || { columnFields: [], valueField: "", aggregation: "sum" }),
+                        rowFields: fields
+                      }
+                    });
+                  }}
+                  placeholder="e.g., Region, Category"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 4,
+                    fontSize: 13,
+                  }}
+                />
+                <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
+                  Columns from your SQL query to group by as rows
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Column Fields (comma-separated)</label>
+                <input
+                  type="text"
+                  value={(form.pivot_config?.columnFields || []).join(", ")}
+                  onChange={e => {
+                    const value = e.target.value;
+                    // Only split and filter when there's actual content, preserve raw input during typing
+                    const fields = value.length > 0 ? value.split(",").map(s => s.trim()) : [];
+                    setForm({ 
+                      ...form, 
+                      pivot_enabled: true,
+                      pivot_config: { 
+                        ...(form.pivot_config || { rowFields: [], valueField: "", aggregation: "sum" }),
+                        columnFields: fields
+                      }
+                    });
+                  }}
+                  placeholder="e.g., Year, Quarter"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 4,
+                    fontSize: 13,
+                  }}
+                />
+                <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
+                  Columns from your SQL query to group by as columns
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Value Field</label>
+                  <input
+                    type="text"
+                    value={form.pivot_config?.valueField || ""}
+                    onChange={e => setForm({ 
+                      ...form, 
+                      pivot_enabled: true,
+                      pivot_config: { 
+                        ...(form.pivot_config || { rowFields: [], columnFields: [], aggregation: "sum" }),
+                        valueField: e.target.value
+                      }
+                    })}
+                    placeholder="e.g., Sales"
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 4,
+                      fontSize: 13,
+                    }}
+                  />
+                  <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
+                    Column to aggregate
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Aggregation</label>
+                  <select
+                    value={form.pivot_config?.aggregation || "sum"}
+                    onChange={e => setForm({ 
+                      ...form, 
+                      pivot_enabled: true,
+                      pivot_config: { 
+                        ...(form.pivot_config || { rowFields: [], columnFields: [], valueField: "" }),
+                        aggregation: e.target.value as "sum" | "avg" | "count" | "min" | "max"
+                      }
+                    })}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 4,
+                      fontSize: 13,
+                    }}
+                  >
+                    <option value="sum">Sum</option>
+                    <option value="avg">Average</option>
+                    <option value="count">Count</option>
+                    <option value="min">Minimum</option>
+                    <option value="max">Maximum</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Conditional Formatting for table and pivot cards */}
+          {(form.visualization_type === "table" || form.visualization_type === "pivot") && (
             <div style={{ marginTop: 16, padding: 16, background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#374151" }}>
                 Conditional Formatting
@@ -837,6 +1064,19 @@ export default function AdminCards() {
                     data={previewData} 
                     chartType={form.chart_type || "bar"}
                     title="Preview Results" 
+                  />
+                </div>
+              ) : form.visualization_type === "pivot" && form.pivot_config ? (
+                // Pivot Table Preview
+                <div style={{ height: 400 }}>
+                  <PivotTable
+                    data={transformToPivot(previewData, form.pivot_config)}
+                    rawData={previewData}
+                    pivotConfig={form.pivot_config}
+                    title="Preview Results (Pivoted)"
+                    fontSize={form.font_size}
+                    fontFamily={form.font_family}
+                    conditionalFormatting={form.conditional_formatting}
                   />
                 </div>
               ) : (

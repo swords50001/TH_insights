@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { DashboardCard as CardView } from "../DashboardCard";
+import { DashboardCard as CardView, ConditionalFormattingRule, PivotConfig } from "../DashboardCard";
 
 type VisualizationType = "metric" | "table" | "chart";
 
@@ -14,6 +14,12 @@ export type Card = {
 	group_order?: number;
 	header_bg_color?: string;
 	header_text_color?: string;
+	hide_title?: boolean;
+	font_size?: string;
+	font_family?: string;
+	conditional_formatting?: ConditionalFormattingRule[];
+	pivot_enabled?: boolean;
+	pivot_config?: PivotConfig;
 };
 
 export type PositionedCard = Card & {
@@ -53,6 +59,7 @@ function GridCard({
 	onResize,
 	onRemove,
 	filters,
+	onExpand,
 }: {
 	card: PositionedCard;
 	readOnly?: boolean;
@@ -60,6 +67,7 @@ function GridCard({
 	onResize?: (dw: number, dh: number) => void;
 	onRemove?: () => void;
 	filters?: Record<string, any>;
+	onExpand?: () => void;
 }) {
 	const handleDragMove = (e: React.MouseEvent) => {
 		if (readOnly || !onMove) return;
@@ -152,6 +160,28 @@ function GridCard({
 					{card.title}
 				</span>
 				<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+					{readOnly && onExpand && (
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								onExpand();
+							}}
+							style={{
+								padding: "2px 6px",
+								borderRadius: 3,
+								border: "1px solid #3b82f6",
+								background: "#fff",
+								color: "#3b82f6",
+								cursor: "pointer",
+								fontSize: 10,
+								fontWeight: 500,
+								lineHeight: 1,
+							}}
+							title="Expand"
+						>
+							⛶
+						</button>
+					)}
 					{!readOnly && (
 						<span style={{ fontSize: 11, color: "#9ca3af" }}>
 							{card.width}×{card.height}
@@ -218,6 +248,7 @@ export function DashboardGrid({
 }: DashboardGridProps) {
 	const [cards, setCards] = useState<PositionedCard[]>(initialCards);
 	const [groupPositions, setGroupPositions] = useState<GroupPosition[]>(initialGroupPositions);
+	const [expandedCard, setExpandedCard] = useState<PositionedCard | null>(null);
 
 	useEffect(() => {
 		setCards(initialCards);
@@ -407,6 +438,7 @@ export function DashboardGrid({
 					maxWidth: "100%",
 					borderRadius: "8px",
 					boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+					zIndex: 1,
 				} : {}),
 		};
 		
@@ -475,8 +507,7 @@ export function DashboardGrid({
 								onMove={(dx, dy) => updateCardPosition(card.id, dx, dy)}
 								onResize={(dw, dh) => updateCardSize(card.id, dw, dh)}
 								onRemove={onCardRemoved ? () => onCardRemoved(card.id) : undefined}
-								filters={filters}
-							/>
+								filters={filters}							onExpand={readOnly ? () => setExpandedCard(card) : undefined}							/>
 						))}
 
 						{group.cards.length === 0 && (
@@ -515,6 +546,85 @@ export function DashboardGrid({
 				</div>
 			)}
 			</div>
+
+			{/* Expanded Card Modal */}
+			{expandedCard && (
+				<div
+					style={{
+						position: "fixed",
+						top: 0,
+						left: 0,
+						right: 0,
+						bottom: 0,
+						background: "rgba(0, 0, 0, 0.7)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						zIndex: 9999,
+						padding: 32,
+					}}
+					onClick={() => setExpandedCard(null)}
+				>
+					<div
+						style={{
+							background: "#fff",
+							borderRadius: 12,
+							boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+							maxWidth: "90vw",
+							maxHeight: "90vh",
+							width: "1200px",
+							display: "flex",
+							flexDirection: "column",
+							overflow: "hidden",
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						{/* Modal Header */}
+						<div
+							style={{
+								padding: "16px 24px",
+								borderBottom: "1px solid #e5e7eb",
+								background: "#f9fafb",
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "center",
+							}}
+						>
+							<span style={{ fontSize: 18, fontWeight: 600, color: "#374151" }}>
+								{expandedCard.title}
+							</span>
+							<button
+								onClick={() => setExpandedCard(null)}
+								style={{
+									padding: "8px 16px",
+									borderRadius: 6,
+									border: "1px solid #d1d5db",
+									background: "#fff",
+									color: "#374151",
+									cursor: "pointer",
+									fontSize: 14,
+									fontWeight: 500,
+								}}
+							>
+								Close
+							</button>
+						</div>
+
+						{/* Modal Content */}
+						<div
+							style={{
+								height: "70vh",
+								overflow: "auto",
+								padding: 24,
+							}}
+						>
+							<div style={{ width: "100%", height: "100%" }}>
+								<CardView card={expandedCard} filters={filters} />
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

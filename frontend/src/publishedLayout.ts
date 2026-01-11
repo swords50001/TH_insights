@@ -17,9 +17,12 @@ export interface PublishedLayout {
 }
 
 // Fetch published layout from server (tenant-aware)
-export async function getPublishedLayout(): Promise<PublishedLayout | null> {
+export async function getPublishedLayout(dashboardId?: number): Promise<PublishedLayout | null> {
   try {
-    const response = await api.get("/dashboard/layout/layout");
+    const url = dashboardId 
+      ? `/dashboard/layout/layout?dashboard_id=${dashboardId}`
+      : "/dashboard/layout/layout";
+    const response = await api.get(url);
     if (!response.data) return null;
     
     // Server returns layout_data which contains the cards
@@ -42,9 +45,9 @@ export async function getPublishedLayout(): Promise<PublishedLayout | null> {
 }
 
 // Publish layout to server (tenant-aware)
-export async function publishLayout(cards: PositionedCard[], groupPositions?: GroupPosition[], publishedBy?: string): Promise<void> {
+export async function publishLayout(cards: PositionedCard[], groupPositions?: GroupPosition[], publishedBy?: string, dashboardId?: number): Promise<void> {
   try {
-    await api.post("/dashboard/layout/layout", { cards, groupPositions });
+    await api.post("/dashboard/layout/layout", { cards, groupPositions, dashboard_id: dashboardId });
     
     // Also save to localStorage as backup
     const layout: PublishedLayout = {
