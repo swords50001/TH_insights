@@ -2,10 +2,10 @@
 
 ## Pre-Deployment
 
-- [ ] AWS Account created and configured
-- [ ] AWS CLI installed and configured
-- [ ] Docker installed locally
-- [ ] Repository cloned and up to date
+- [X] AWS Account created and configured
+- [X] AWS CLI installed and configured
+- [X] Docker installed locally
+- [X] Repository cloned and up to date
 - [ ] All environment variables documented
 
 ## Infrastructure Setup
