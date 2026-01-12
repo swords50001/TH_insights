@@ -2,18 +2,17 @@
   "family": "th-insights-backend",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
-  "cpu": "512",
-  "memory": "1024",
-  "executionRoleArn": "arn:aws:iam:::role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam:::role/ecsTaskRole",
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::940053359004:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::940053359004:role/ecsTaskRole",
   "containerDefinitions": [
     {
       "name": "backend",
-      "image": "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/th-insights-backend:latest",
-      "essential": true,
+      "image": "940053359004.dkr.ecr.us-west-2.amazonaws.com/th-insights-backend:latest",
       "portMappings": [
         {
-          "containerPort": 8080,
+          "containerPort": 3000,
           "protocol": "tcp"
         }
       ],
@@ -24,49 +23,50 @@
         },
         {
           "name": "PORT",
-          "value": "8080"
+          "value": "3000"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "value": "th-db-insights.cx4mmeokynqf.us-west-2.rds.amazonaws.com"
         },
         {
           "name": "DATABASE_PORT",
           "value": "5432"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "value": "th-db-insights"
+        },
+        {
+          "name": "DATABASE_USER",
+          "value": "thadmin"
         }
       ],
       "secrets": [
         {
-          "name": "DATABASE_HOST",
-          "valueFrom": "arn:aws:secretsmanager:YOUR_REGION:YOUR_ACCOUNT_ID:secret:th-insights/db-host"
-        },
-        {
-          "name": "DATABASE_NAME",
-          "valueFrom": "arn:aws:secretsmanager:YOUR_REGION:YOUR_ACCOUNT_ID:secret:th-insights/db-name"
-        },
-        {
-          "name": "DATABASE_USER",
-          "valueFrom": "arn:aws:secretsmanager:YOUR_REGION:YOUR_ACCOUNT_ID:secret:th-insights/db-user"
-        },
-        {
           "name": "DATABASE_PASSWORD",
-          "valueFrom": "arn:aws:secretsmanager:YOUR_REGION:YOUR_ACCOUNT_ID:secret:th-insights/db-password"
+          "valueFrom": "arn:aws:secretsmanager:us-west-2:940053359004:secret:th-insights/db-password"
         },
         {
           "name": "JWT_SECRET",
-          "valueFrom": "arn:aws:secretsmanager:YOUR_REGION:YOUR_ACCOUNT_ID:secret:th-insights/jwt-secret"
+          "valueFrom": "arn:aws:secretsmanager:us-west-2:940053359004:secret:th-insights/jwt-secret"
         }
       ],
-      "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"],
-        "interval": 30,
-        "timeout": 5,
-        "retries": 3,
-        "startPeriod": 60
-      },
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
           "awslogs-group": "/ecs/th-insights-backend",
-          "awslogs-region": "YOUR_REGION",
+          "awslogs-region": "us-west-2",
           "awslogs-stream-prefix": "ecs"
         }
+      },
+      "essential": true,
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
       }
     }
   ]
