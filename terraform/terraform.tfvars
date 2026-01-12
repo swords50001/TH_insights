@@ -1,0 +1,5 @@
+aws_region = "us-west-2"
+environment = "production"
+db_endpoint = "th-db-insights.cx4mmeokynqf.us-west-2.rds.amazonaws.com"
+db_password = "DJJAiKQVI0RTVHK"  
+jwt_secret = "gu69OqSZFS1IME8wAu7YD5VImIqyJiU5sLgBF8Ub"
