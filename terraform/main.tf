@@ -7,13 +7,6 @@ terraform {
       version = "~> 5.0"
     }
   }
-
-  backend "s3" {
-    bucket = "th-insights-terraform-state"
-    key    = "production/terraform.tfstate"
-    region = "us-west-2"
-    encrypt = true
-  }
 }
 
 provider "aws" {
@@ -39,68 +32,36 @@ variable "project_name" {
   default     = "th-insights"
 }
 
+variable "db_endpoint" {
+  description = "RDS database endpoint"
+  type        = string
+  default     = ""
+}
+
+variable "db_password" {
+  description = "RDS database password"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "jwt_secret" {
+  description = "JWT secret key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 # VPC Configuration
 module "vpc" {
   source = "./modules/vpc"
   
   project_name = var.project_name
-  environment  = var.environment
-  
-  vpc_cidr           = "10.0.0.0/16"
-  availability_zones = ["${var.aws_region}a", "${var.aws_region}b"]
-  public_subnets     = ["10.0.1.0/24", "10.0.2.0/24"]
-  private_subnets    = ["10.0.11.0/24", "10.0.12.0/24"]
-}
-
-# RDS PostgreSQL Database
-module "rds" {
-  source = "./modules/rds"
-  
-  project_name = var.project_name
-  environment  = var.environment
-  
-  vpc_id             = module.vpc.vpc_id
-  subnet_ids         = module.vpc.private_subnet_ids
-  allowed_cidr_blocks = module.vpc.private_subnet_cidrs
-  
-  database_name     = "th_db"
-  master_username   = "postgres"
-  instance_class    = "db.t3.micro"
-  allocated_storage = 20
-}
-
-# ECR Repositories
-resource "aws_ecr_repository" "backend" {
-  name                 = "${var.project_name}-backend"
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
-}
-
-resource "aws_ecr_repository" "frontend" {
-  name                 = "${var.project_name}-frontend"
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
 }
 
 # ECS Cluster
 resource "aws_ecs_cluster" "main" {
-  name = "${var.project_name}-${var.environment}"
+  name = "${var.project_name}-cluster"
 
   setting {
     name  = "containerInsights"
@@ -108,164 +69,27 @@ resource "aws_ecs_cluster" "main" {
   }
 
   tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
-}
-
-# Application Load Balancer
-module "alb" {
-  source = "./modules/alb"
-  
-  project_name = var.project_name
-  environment  = var.environment
-  
-  vpc_id          = module.vpc.vpc_id
-  public_subnets  = module.vpc.public_subnet_ids
-  certificate_arn = aws_acm_certificate.main.arn
-}
-
-# ECS Services
-module "ecs_backend" {
-  source = "./modules/ecs-service"
-  
-  project_name = var.project_name
-  environment  = var.environment
-  service_name = "backend"
-  
-  cluster_id        = aws_ecs_cluster.main.id
-  vpc_id           = module.vpc.vpc_id
-  private_subnets  = module.vpc.private_subnet_ids
-  
-  container_port   = 8080
-  cpu              = "512"
-  memory           = "1024"
-  desired_count    = 2
-  
-  image_url        = "${aws_ecr_repository.backend.repository_url}:latest"
-  target_group_arn = module.alb.backend_target_group_arn
-  
-  environment_variables = {
-    NODE_ENV      = "production"
-    PORT          = "8080"
-    DATABASE_HOST = module.rds.endpoint
-    DATABASE_PORT = "5432"
-    DATABASE_NAME = module.rds.database_name
-  }
-  
-  secrets = {
-    DATABASE_PASSWORD = DJJAiKQVI0RTVHK
-    JWT_SECRET       = zm+KbE2/v1hqWD40Na5VBtnIyrDIWqwYK07PYrIGcV8=
-  }
-}
-
-module "ecs_frontend" {
-  source = "./modules/ecs-service"
-  
-  project_name = var.project_name
-  environment  = var.environment
-  service_name = "frontend"
-  
-  cluster_id        = aws_ecs_cluster.main.id
-  vpc_id           = module.vpc.vpc_id
-  private_subnets  = module.vpc.private_subnet_ids
-  
-  container_port   = 80
-  cpu              = "256"
-  memory           = "512"
-  desired_count    = 2
-  
-  image_url        = "${aws_ecr_repository.frontend.repository_url}:latest"
-  target_group_arn = module.alb.frontend_target_group_arn
-  
-  environment_variables = {
-    VITE_API_URL = "https://api.${var.domain_name}"
-  }
-}
-
-# Secrets Manager
-resource "aws_secretsmanager_secret" "db_password" {
-  name = "${var.project_name}/db-password"
-  
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
-}
-
-resource "aws_secretsmanager_secret" "jwt_secret" {
-  name = "${var.project_name}/jwt-secret"
-  
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
-}
-
-# CloudWatch Log Groups
-resource "aws_cloudwatch_log_group" "backend" {
-  name              = "/ecs/${var.project_name}-backend"
-  retention_in_days = 30
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
-}
-
-resource "aws_cloudwatch_log_group" "frontend" {
-  name              = "/ecs/${var.project_name}-frontend"
-  retention_in_days = 30
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
-}
-
-# Route53 & ACM Certificate (if using custom domain)
-variable "domain_name" {
-  description = "Domain name for the application"
-  type        = string
-  default     = "yourdomain.com"
-}
-
-resource "aws_acm_certificate" "main" {
-  domain_name       = var.domain_name
-  validation_method = "DNS"
-
-  subject_alternative_names = [
-    "*.${var.domain_name}"
-  ]
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
-
-  lifecycle {
-    create_before_destroy = true
+    Name = "${var.project_name}-cluster"
   }
 }
 
 # Outputs
-output "alb_dns_name" {
-  description = "DNS name of the load balancer"
-  value       = module.alb.dns_name
+output "vpc_id" {
+  value       = module.vpc.vpc_id
+  description = "VPC ID"
 }
 
-output "rds_endpoint" {
-  description = "RDS endpoint"
-  value       = module.rds.endpoint
-  sensitive   = true
+output "public_subnet_ids" {
+  value       = module.vpc.public_subnet_ids
+  description = "Public subnet IDs"
 }
 
-output "ecr_backend_repository_url" {
-  description = "ECR repository URL for backend"
-  value       = aws_ecr_repository.backend.repository_url
+output "private_subnet_ids" {
+  value       = module.vpc.private_subnet_ids
+  description = "Private subnet IDs"
 }
 
-output "ecr_frontend_repository_url" {
-  description = "ECR repository URL for frontend"
-  value       = aws_ecr_repository.frontend.repository_url
+output "ecs_cluster_id" {
+  value       = aws_ecs_cluster.main.id
+  description = "ECS cluster ID"
 }
