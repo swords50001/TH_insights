@@ -40,16 +40,14 @@
         {
           "name": "DATABASE_USER",
           "value": "thadmin"
-        }
-      ],
-      "secrets": [
+        },
         {
           "name": "DATABASE_PASSWORD",
-          "valueFrom": "arn:aws:secretsmanager:us-west-2:940053359004:secret:th-insights/db-password"
+          "value": "DJJAiKQVI0RTVHK"
         },
         {
           "name": "JWT_SECRET",
-          "valueFrom": "arn:aws:secretsmanager:us-west-2:940053359004:secret:th-insights/jwt-secret"
+          "value": "zm+KbE2/v1hqWD40Na5VBtnIyrDIWqwYK07PYrIGcV8="
         }
       ],
       "logConfiguration": {
