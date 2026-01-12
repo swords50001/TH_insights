@@ -154,8 +154,8 @@ module "ecs_backend" {
   }
   
   secrets = {
-    DATABASE_PASSWORD = aws_secretsmanager_secret.db_password.arn
-    JWT_SECRET       = aws_secretsmanager_secret.jwt_secret.arn
+    DATABASE_PASSWORD = DJJAiKQVI0RTVHK
+    JWT_SECRET       = zm+KbE2/v1hqWD40Na5VBtnIyrDIWqwYK07PYrIGcV8=
   }
 }
 
