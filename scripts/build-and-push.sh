@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-AWS_REGION="${1:-us-east-1}"
+AWS_REGION="${1:-us-west-2}"
 AWS_ACCOUNT_ID="${2}"
 BACKEND_REPO="th-insights-backend"
 FRONTEND_REPO="th-insights-frontend"

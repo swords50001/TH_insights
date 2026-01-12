@@ -14,7 +14,7 @@ Builds Docker images and pushes them to AWS ECR.
 
 **Example:**
 ```bash
-./build-and-push.sh us-east-1 123456789012
+./build-and-push.sh us-west-2 123456789012
 ```
 
 ### deploy-to-aws.sh
@@ -27,7 +27,7 @@ Deploys the application to AWS ECS by forcing a new deployment.
 
 **Example:**
 ```bash
-./deploy-to-aws.sh production us-east-1
+./deploy-to-aws.sh production us-west-2
 ```
 
 ### run-migrations.sh
@@ -52,7 +52,7 @@ chmod +x scripts/*.sh
 ## Environment Variables
 
 Scripts use the following environment variables:
-- `AWS_REGION` - AWS region (default: us-east-1)
+- `AWS_REGION` - AWS region (default: us-west-2)
 - `AWS_ACCOUNT_ID` - Your AWS account ID
 
 ## Prerequisites
@@ -67,7 +67,7 @@ Scripts use the following environment variables:
 
 1. **Build and Push Images:**
    ```bash
-   ./scripts/build-and-push.sh us-east-1 YOUR_ACCOUNT_ID
+   ./scripts/build-and-push.sh us-west-2 YOUR_ACCOUNT_ID
    ```
 
 2. **Run Migrations (first time only):**
@@ -77,7 +77,7 @@ Scripts use the following environment variables:
 
 3. **Deploy to ECS:**
    ```bash
-   ./scripts/deploy-to-aws.sh production us-east-1
+   ./scripts/deploy-to-aws.sh production us-west-2
    ```
 
 ## Troubleshooting

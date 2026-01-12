@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: us-west-2
   ECR_BACKEND_REPOSITORY: th-insights-backend
   ECR_FRONTEND_REPOSITORY: th-insights-frontend
   ECS_CLUSTER: th-insights-production

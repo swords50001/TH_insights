@@ -82,13 +82,13 @@ aws secretsmanager create-secret --name th-insights/jwt-secret --secret-string "
 ### 5. Deploy
 ```bash
 # Build and push images
-./scripts/build-and-push.sh us-east-1 YOUR_ACCOUNT_ID
+./scripts/build-and-push.sh us-west-2 YOUR_ACCOUNT_ID
 
 # Run migrations
 ./scripts/run-migrations.sh
 
 # Deploy to ECS
-./scripts/deploy-to-aws.sh production us-east-1
+./scripts/deploy-to-aws.sh production us-west-2
 ```
 
 ## 📊 Architecture

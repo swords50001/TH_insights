@@ -92,7 +92,7 @@ cp backend/.env.production.example backend/.env.production
 
 ```bash
 chmod +x scripts/build-and-push.sh
-./scripts/build-and-push.sh us-east-1 YOUR_ACCOUNT_ID
+./scripts/build-and-push.sh us-west-2 YOUR_ACCOUNT_ID
 ```
 
 ### 5. Run Database Migrations
@@ -106,7 +106,7 @@ chmod +x scripts/run-migrations.sh
 
 ```bash
 chmod +x scripts/deploy-to-aws.sh
-./scripts/deploy-to-aws.sh production us-east-1
+./scripts/deploy-to-aws.sh production us-west-2
 ```
 
 ## GitHub Actions CI/CD
@@ -183,7 +183,7 @@ aws application-autoscaling register-scalable-target \
 
 ## Cost Optimization
 
-**Estimated Monthly Costs (us-east-1):**
+**Estimated Monthly Costs (us-west-2):**
 - ECS Fargate: ~$50-100
 - RDS db.t3.micro: ~$15
 - ALB: ~$20
