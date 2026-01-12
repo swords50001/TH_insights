@@ -11,7 +11,7 @@ terraform {
   backend "s3" {
     bucket = "th-insights-terraform-state"
     key    = "production/terraform.tfstate"
-    region = "us-east-1"
+    region = "us-west-2"
     encrypt = true
   }
 }
@@ -24,7 +24,7 @@ provider "aws" {
 variable "aws_region" {
   description = "AWS region"
   type        = string
-  default     = "us-east-1"
+  default     = "us-west-2"
 }
 
 variable "environment" {
