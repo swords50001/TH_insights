@@ -31,8 +31,8 @@ function ensureKeysExist(filePath, required) {
 
 const repoRoot = path.resolve(__dirname, '..');
 
-const backendEnv = path.join(repoRoot, 'backend', '.env.example');
-const frontendEnv = path.join(repoRoot, 'frontend', '.env.example');
+const backendEnv = path.join(repoRoot, 'backend', '.env');
+const frontendEnv = path.join(repoRoot, 'frontend', '.env');
 
 let ok = true;
 
