@@ -27,3 +27,13 @@ output "rds_security_group_id" {
   value       = aws_security_group.rds.id
   description = "RDS security group ID"
 }
+
+output "vpc_cidr" {
+  value       = aws_vpc.main.cidr_block
+  description = "VPC CIDR block"
+}
+
+output "public_route_table_id" {
+  value       = aws_route_table.public.id
+  description = "Public route table ID"
+}

@@ -1,0 +1,14 @@
+version: 1.0
+runtime: nodejs18
+build:
+  commands:
+    build:
+      - npm ci
+      - npm run build
+env:
+  - name: VITE_API_URL
+    value: "http://localhost:8080"
+run:
+  runtime-version: 18
+  command: nginx -g 'daemon off;'
+  port: 80
