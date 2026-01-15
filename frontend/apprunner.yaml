@@ -5,6 +5,3 @@ build:
     build:
       - npm ci
       - npm run build
-env:
-  - name: VITE_API_URL
-    value: http://wb8dgirwq3.us-west-2.awsapprunner.com:8080
