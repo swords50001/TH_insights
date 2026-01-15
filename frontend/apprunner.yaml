@@ -7,4 +7,3 @@ build:
       - VITE_API_URL=http://wb8dgirwq3.us-west-2.awsapprunner.com:8080 npm run build
 run:
   command: npm start
-  port: 80
