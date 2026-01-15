@@ -1,5 +1,0 @@
-version: 1.0
-build:
-  commands:
-    build:
-      - docker build --build-arg VITE_API_URL=http://wb8dgirwq3.us-west-2.awsapprunner.com:8080 -t frontend:latest .
