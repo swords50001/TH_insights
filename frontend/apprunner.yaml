@@ -1,0 +1,7 @@
+version: 1.0
+build:
+  commands:
+    pre-build:
+      - echo "Building frontend with VITE_API_URL"
+    build:
+      - VITE_API_URL=http://wb8dgirwq3.us-west-2.awsapprunner.com:8080 npm ci && npm run build && docker build --build-arg VITE_API_URL=http://wb8dgirwq3.us-west-2.awsapprunner.com:8080 -t app:latest .
