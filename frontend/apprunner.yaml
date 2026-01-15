@@ -4,7 +4,9 @@ build:
   commands:
     build:
       - npm ci
-      - VITE_API_URL=http://wb8dgirwq3.us-west-2.awsapprunner.com:8080 npm run build
+      - npm run build
 run:
   command: nginx -g 'daemon off;'
-  port: 80
+  env:
+    - name: VITE_API_URL
+      value: http://wb8dgirwq3.us-west-2.awsapprunner.com:8080
