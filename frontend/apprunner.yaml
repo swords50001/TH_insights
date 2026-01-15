@@ -1,0 +1,10 @@
+version: 1.0
+runtime: nodejs18
+build:
+  commands:
+    build:
+      - npm ci
+      - VITE_API_URL=http://wb8dgirwq3.us-west-2.awsapprunner.com:8080 npm run build
+run:
+  command: nginx -g 'daemon off;'
+  port: 80
