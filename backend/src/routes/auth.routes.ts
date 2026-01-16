@@ -16,19 +16,4 @@ if (!valid) return res.sendStatus(401);
 res.json({ token: signToken(rows[0]) });
 });
 
-// Temporary signup endpoint - remove after creating users
-router.post("/signup", async (req, res) => {
-try {
-const { email, password, name } = req.body;
-const passwordHash = await bcrypt.hash(password, 10);
-const { rows } = await pool.query(
-"INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id, email, name",
-[email, passwordHash, name || email]
-);
-res.json({ success: true, user: rows[0] });
-} catch (error: any) {
-res.status(400).json({ error: error.message });
-}
-});
-
 export default router;
