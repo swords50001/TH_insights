@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import { auth } from "./middleware";
 import { tenantResolver, getTenantConfig } from "./tenant";
 import { signToken } from "./auth";
+import { runMigrations } from "./migrations";
 import adminRoutes from "./routes/admin.routes";
 import layoutRoutes from "./routes/layout.routes";
 import filterRoutes from "./routes/filter.routes";
@@ -35,7 +36,10 @@ const pool = new Pool({
 });
 
 pool.connect()
-  .then(() => console.log("Connected to database"))
+  .then(async () => {
+    console.log("Connected to database");
+    await runMigrations(pool);
+  })
   .catch((err: any) => console.error("DB connection error", err));
 
 /* ---------------- AUTH HELPERS ---------------- */
