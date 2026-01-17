@@ -9,6 +9,7 @@ import { tenantResolver, getTenantConfig } from "./tenant";
 import { signToken } from "./auth";
 import { runMigrations } from "./migrations";
 import adminRoutes from "./routes/admin.routes";
+import authRoutes from "./routes/auth.routes";
 import layoutRoutes from "./routes/layout.routes";
 import filterRoutes from "./routes/filter.routes";
 import dashboardTabsRoutes from "./routes/dashboard-tabs.routes";
@@ -280,6 +281,7 @@ function transformToPivot(
 
 /* ---------------- ADMIN ROUTES ---------------- */
 
+app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/admin', filterRoutes);
 app.use('/admin/dashboards', dashboardTabsRoutes);
