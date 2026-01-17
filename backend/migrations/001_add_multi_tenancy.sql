@@ -10,8 +10,9 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Add tenant_id to users table
+-- Add tenant_id and name to users table
 ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(50) NOT NULL DEFAULT 'default';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255);
 CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
 
 -- Add tenant_id to dashboard_cards table
