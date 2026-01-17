@@ -4,6 +4,7 @@ build:
   commands:
     build:
       - npm ci
+      # Cache bust - corrected API URL without port
       - VITE_API_URL=https://wb8dgirwq3.us-west-2.awsapprunner.com npm run build
 run:
   command: npm start
