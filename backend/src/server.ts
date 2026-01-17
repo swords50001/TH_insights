@@ -39,7 +39,8 @@ const pool = new Pool({
 pool.connect()
   .then(async () => {
     console.log("Connected to database");
-    await runMigrations(pool);
+    // Run migrations but don't block on them - let them happen in background
+    runMigrations(pool).catch((err: any) => console.error("Migration error:", err));
   })
   .catch((err: any) => console.error("DB connection error", err));
 
