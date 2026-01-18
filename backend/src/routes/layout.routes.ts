@@ -92,8 +92,8 @@ router.post("/layout", async (req: AuthRequest, res) => {
     
     res.json(result.rows[0]);
   } catch (err: any) {
-    console.error("Error publishing layout:", err);
-    res.status(500).json({ error: "Failed to publish layout" });
+    console.error("Error publishing layout:", err.message, err);
+    res.status(500).json({ error: err.message || "Failed to publish layout" });
   }
 });
 
