@@ -11,6 +11,7 @@ import { runMigrations } from "./migrations";
 import adminRoutes from "./routes/admin.routes";
 import authRoutes from "./routes/auth.routes";
 import layoutRoutes from "./routes/layout.routes";
+import layoutAdminRoutes from "./routes/layout-admin.routes";
 import filterRoutes from "./routes/filter.routes";
 import dashboardTabsRoutes from "./routes/dashboard-tabs.routes";
 
@@ -289,6 +290,7 @@ app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/admin', filterRoutes);
 app.use('/admin/dashboards', dashboardTabsRoutes);
+app.use('/admin/layout', layoutAdminRoutes);
 
 /* ---------------- LAYOUT ROUTES ---------------- */
 

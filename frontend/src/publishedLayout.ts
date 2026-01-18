@@ -20,8 +20,8 @@ export interface PublishedLayout {
 export async function getPublishedLayout(dashboardId?: number): Promise<PublishedLayout | null> {
   try {
     const url = dashboardId 
-      ? `/dashboard/layout/layout?dashboard_id=${dashboardId}`
-      : "/dashboard/layout/layout";
+      ? `/dashboard/layout?dashboard_id=${dashboardId}`
+      : "/dashboard/layout";
     const response = await api.get(url);
     if (!response.data) return null;
     
@@ -47,7 +47,7 @@ export async function getPublishedLayout(dashboardId?: number): Promise<Publishe
 // Publish layout to server (tenant-aware)
 export async function publishLayout(cards: PositionedCard[], groupPositions?: GroupPosition[], publishedBy?: string, dashboardId?: number): Promise<void> {
   try {
-    await api.post("/dashboard/layout/layout", { cards, groupPositions, dashboard_id: dashboardId });
+    await api.post("/dashboard/layout", { cards, groupPositions, dashboard_id: dashboardId });
     
     // Also save to localStorage as backup
     const layout: PublishedLayout = {
@@ -66,7 +66,7 @@ export async function publishLayout(cards: PositionedCard[], groupPositions?: Gr
 // Clear published layout
 export async function clearPublishedLayout(): Promise<void> {
   try {
-    await api.delete("/dashboard/layout/layout");
+    await api.delete("/dashboard/layout");
     localStorage.removeItem(STORAGE_KEY);
   } catch (err) {
     console.error("Failed to clear layout:", err);
