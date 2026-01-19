@@ -6,7 +6,7 @@ const router = Router();
 router.use(auth);
 
 // Get published layout for current tenant and dashboard
-router.get("/layout", async (req: AuthRequest, res) => {
+router.get("/", async (req: AuthRequest, res) => {
   const tenant_id = req.user?.tenant_id || 'default';
   const dashboard_id = req.query.dashboard_id;
   
@@ -42,7 +42,7 @@ router.get("/layout", async (req: AuthRequest, res) => {
 });
 
 // Publish layout for current tenant and dashboard (admin only)
-router.post("/layout", async (req: AuthRequest, res) => {
+router.post("/", async (req: AuthRequest, res) => {
   const tenant_id = req.user?.tenant_id || 'default';
   const user_id = req.user?.id;
   const { cards, groupPositions, dashboard_id } = req.body;
@@ -98,7 +98,7 @@ router.post("/layout", async (req: AuthRequest, res) => {
 });
 
 // Delete published layout for current tenant (admin only)
-router.delete("/layout", async (req: AuthRequest, res) => {
+router.delete("/", async (req: AuthRequest, res) => {
   const tenant_id = req.user?.tenant_id || 'default';
   
   // Verify user is admin
