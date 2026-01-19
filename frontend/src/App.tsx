@@ -13,7 +13,31 @@ import React from "react";
 export default function App() {
   const [sidebarWidth, setSidebarWidth] = React.useState(240);
   const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(!!localStorage.getItem('token'));
 
+  React.useEffect(() => {
+    // Check token on mount and whenever storage changes
+    const checkAuth = () => setIsAuthenticated(!!localStorage.getItem('token'));
+    window.addEventListener('storage', checkAuth);
+    return () => window.removeEventListener('storage', checkAuth);
+  }, []);
+
+  // If not authenticated and not on login page, show login only
+  if (!isAuthenticated && window.location.pathname !== '/login') {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If not authenticated, show login without sidebar/header
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  // Authenticated: show full layout with sidebar and header
   return (
     <div className="app">
       <Sidebar onWidthChange={setSidebarWidth} onCollapseChange={setIsCollapsed} />
@@ -26,12 +50,12 @@ export default function App() {
       }}>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><AdminCards /></ProtectedRoute>} />
-          <Route path="/admin/filters" element={<ProtectedRoute><AdminFilters /></ProtectedRoute>} />
-          <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/admin" element={<AdminCards />} />
+          <Route path="/admin/filters" element={<AdminFilters />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

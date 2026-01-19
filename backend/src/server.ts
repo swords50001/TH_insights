@@ -94,12 +94,17 @@ app.post("/auth/login", async (req: Request, res: Response) => {
 /* ---------------- DASHBOARD ROUTES ---------------- */
 
 app.get("/dashboard/cards", auth, async (req: AuthRequest, res) => {
-  const tenant_id = req.user?.tenant_id || 'default';
-  const result = await pool.query(
-    "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config FROM dashboard_cards WHERE tenant_id = $1 ORDER BY group_order, id",
-    [tenant_id]
-  );
-  res.json(result.rows);
+  try {
+    const tenant_id = req.user?.tenant_id || 'default';
+    const result = await pool.query(
+      "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config FROM dashboard_cards WHERE tenant_id = $1 ORDER BY group_order, id",
+      [tenant_id]
+    );
+    res.json(result.rows);
+  } catch (err: any) {
+    console.error('Error fetching dashboard cards:', err.message, err);
+    res.status(500).json({ error: err.message || 'Failed to fetch cards' });
+  }
 });
 
 // Preview endpoint for testing queries before saving (must be BEFORE /:id route)
