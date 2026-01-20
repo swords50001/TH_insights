@@ -7,6 +7,7 @@ import { Profile } from "./pages/Profile";
 import AdminCards from "./pages/AdminCards";
 import AdminFilters from "./pages/AdminFilters";
 import { AdminDashboard } from "./pages/AdminDashboard";
+import AdminUsers from "./pages/AdminUsers";
 import Login from "./pages/Login";
 import React from "react";
 
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="/admin" element={<AdminCards />} />
           <Route path="/admin/filters" element={<AdminFilters />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

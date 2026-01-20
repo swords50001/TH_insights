@@ -14,6 +14,7 @@ import layoutRoutes from "./routes/layout.routes";
 import layoutAdminRoutes from "./routes/layout-admin.routes";
 import filterRoutes from "./routes/filter.routes";
 import dashboardTabsRoutes from "./routes/dashboard-tabs.routes";
+import usersRoutes from "./routes/users.routes";
 
 dotenv.config();
 
@@ -22,7 +23,12 @@ const PORT = 8080;
 
 /* ---------------- MIDDLEWARE ---------------- */
 
-app.use(cors({ origin: ["http://localhost:5173", "http://localhost:3000", "https://insights.truvanahealth.com"] }));
+app.use(cors({ 
+  origin: ["http://localhost:5173", "http://localhost:3000", "https://insights.truvanahealth.com"],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(tenantResolver);
 
@@ -296,6 +302,7 @@ app.use('/admin', adminRoutes);
 app.use('/admin', filterRoutes);
 app.use('/admin/dashboards', dashboardTabsRoutes);
 app.use('/admin/layout', layoutAdminRoutes);
+app.use('/admin/users', usersRoutes);
 
 // Non-admin access to dashboards (auth only)
 app.use('/dashboards', dashboardTabsRoutes);
