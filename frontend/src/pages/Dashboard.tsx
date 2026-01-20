@@ -18,7 +18,7 @@ export function Dashboard() {
   useEffect(() => {
     const loadTabs = async () => {
       try {
-        const response = await api.get("/admin/dashboards");
+        const response = await api.get("/dashboards");
         const dashboardTabs = response.data as DashboardTab[];
         setTabs(dashboardTabs);
         
