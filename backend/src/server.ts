@@ -297,6 +297,9 @@ app.use('/admin', filterRoutes);
 app.use('/admin/dashboards', dashboardTabsRoutes);
 app.use('/admin/layout', layoutAdminRoutes);
 
+// Non-admin access to dashboards (auth only)
+app.use('/dashboards', dashboardTabsRoutes);
+
 /* ---------------- LAYOUT ROUTES ---------------- */
 
 app.use('/dashboard/layout', layoutRoutes);
