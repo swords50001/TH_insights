@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Header } from "./components/Header";
 import { Sidebar } from "./components/Sidebar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -15,18 +15,25 @@ export default function App() {
   const [sidebarWidth, setSidebarWidth] = React.useState(240);
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [isAuthenticated, setIsAuthenticated] = React.useState(!!localStorage.getItem('token'));
+  const location = useLocation();
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     // Check token on mount and whenever storage changes
-    const checkAuth = () => setIsAuthenticated(!!localStorage.getItem('token'));
+    const checkAuth = () => {
+      const hasToken = !!localStorage.getItem('token');
+      setIsAuthenticated(hasToken);
+      
+      // Redirect to login if not authenticated and not already on login page
+      if (!hasToken && location.pathname !== '/login') {
+        navigate('/login', { replace: true });
+      }
+    };
+    
+    checkAuth();
     window.addEventListener('storage', checkAuth);
     return () => window.removeEventListener('storage', checkAuth);
-  }, []);
-
-  // If not authenticated and not on login page, show login only
-  if (!isAuthenticated && window.location.pathname !== '/login') {
-    return <Navigate to="/login" replace />;
-  }
+  }, [location.pathname, navigate]);
 
   // If not authenticated, show login without sidebar/header
   if (!isAuthenticated) {
