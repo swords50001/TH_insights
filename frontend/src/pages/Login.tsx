@@ -29,7 +29,7 @@ export default function Login() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        background: "linear-gradient(135deg, #688B2C 0%, #688B2C 100%)",
         padding: "20px",
       }}
     >
@@ -49,7 +49,7 @@ export default function Login() {
             style={{
               fontSize: "32px",
               fontWeight: "700",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "linear-gradient(135deg, #688B2C 0%, #688B2C 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
