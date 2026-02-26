@@ -98,6 +98,7 @@ export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldown
       let query = drilldownQuery;
       Object.keys(row).forEach(key => {
         const placeholder = `{${key}}`;
+        const prefixedPlaceholder = `{p.${key}}`;
         const value = row[key];
         
         // Properly escape string values with single quotes
@@ -111,7 +112,11 @@ export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldown
           replacementValue = String(value);
         }
         
-        query = query.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), replacementValue);
+        const placeholderPattern = new RegExp(
+          `(${placeholder.replace(/[{}]/g, '\\$&')}|${prefixedPlaceholder.replace(/[{}]/g, '\\$&')})`,
+          'g'
+        );
+        query = query.replace(placeholderPattern, replacementValue);
       });
       
       console.log('Executing drill-down query:', query);
