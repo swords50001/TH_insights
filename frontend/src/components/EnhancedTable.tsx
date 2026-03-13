@@ -96,6 +96,16 @@ export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldown
     try {
       // Replace placeholders in drilldown query with row values
       let query = drilldownQuery;
+      const placeholders = Array.from(query.matchAll(/\{([^}]+)\}/g)).map(match => match[1]);
+      const placeholderKeys = placeholders.map(key => key.startsWith('p.') ? key.slice(2) : key);
+      const missingKeys = placeholderKeys.filter(key => !(key in row));
+
+      if (missingKeys.length > 0) {
+        setDrilldownError(`Drilldown query references missing fields: ${missingKeys.join(', ')}`);
+        setDrilldownLoading(false);
+        return;
+      }
+
       Object.keys(row).forEach(key => {
         const placeholder = `{${key}}`;
         const prefixedPlaceholder = `{p.${key}}`;
