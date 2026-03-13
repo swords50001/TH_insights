@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api";
 
 export default function Login() {
@@ -11,6 +12,7 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setIsLoading(true);
+    localStorage.removeItem("token");
     
     try {
       const res = await api.post("/auth/login", { email, password });
@@ -125,18 +127,24 @@ export default function Login() {
           </div>
 
           <div style={{ marginBottom: "24px" }}>
-            <label
-              htmlFor="password"
-              style={{
-                display: "block",
-                fontSize: "14px",
-                fontWeight: "500",
-                color: "#374151",
-                marginBottom: "8px",
-              }}
-            >
-              Password
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <label
+                htmlFor="password"
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  color: "#374151",
+                }}
+              >
+                Password
+              </label>
+              <Link
+                to="/forgot-password"
+                style={{ fontSize: "13px", color: "#688B2C", fontWeight: "500" }}
+              >
+                Forgot password?
+              </Link>
+            </div>
             <input
               id="password"
               type="password"

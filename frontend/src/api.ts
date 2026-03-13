@@ -6,8 +6,13 @@ export const api = axios.create({
 
 api.interceptors.request.use(config => {
   console.log('API Request:', config.method?.toUpperCase(), config.url);
+  const requestUrl = config.url || '';
+  const isAuthEndpoint =
+    requestUrl.includes('/auth/login') ||
+    requestUrl.includes('/auth/forgot-password') ||
+    requestUrl.includes('/auth/reset-password');
   const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token && !isAuthEndpoint) config.headers.Authorization = `Bearer ${token}`;
   
   // Add cache busting headers
   config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';

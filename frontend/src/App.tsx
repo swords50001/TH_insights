@@ -9,6 +9,8 @@ import AdminFilters from "./pages/AdminFilters";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import React from "react";
 
 export default function App() {
@@ -20,12 +22,13 @@ export default function App() {
 
   React.useEffect(() => {
     // Check token on mount and whenever storage changes
+    const publicPaths = ['/login', '/forgot-password', '/reset-password'];
     const checkAuth = () => {
       const hasToken = !!localStorage.getItem('token');
       setIsAuthenticated(hasToken);
       
-      // Redirect to login if not authenticated and not already on login page
-      if (!hasToken && location.pathname !== '/login') {
+      // Redirect to login if not authenticated and not on a public page
+      if (!hasToken && !publicPaths.includes(location.pathname)) {
         navigate('/login', { replace: true });
       }
     };
@@ -35,11 +38,13 @@ export default function App() {
     return () => window.removeEventListener('storage', checkAuth);
   }, [location.pathname, navigate]);
 
-  // If not authenticated, show login without sidebar/header
+  // If not authenticated, show public pages without sidebar/header
   if (!isAuthenticated) {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
