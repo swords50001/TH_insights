@@ -88,6 +88,8 @@ interface Card {
   hide_title?: boolean;
   font_size?: string;
   font_family?: string;
+  section_name?: string;
+  section_order?: number;
   group_name?: string;
   group_order?: number;
   header_bg_color?: string;
@@ -221,6 +223,8 @@ export default function AdminCards() {
       hide_title: card.hide_title,
       font_size: card.font_size,
       font_family: card.font_family,
+      section_name: card.section_name,
+      section_order: card.section_order,
       group_name: card.group_name,
       group_order: card.group_order,
       header_bg_color: card.header_bg_color,
@@ -458,11 +462,57 @@ export default function AdminCards() {
             </div>
           </div>
 
-          {/* Card Grouping */}
+          {/* Card Structure */}
           <div style={{ padding: 16, background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#374151" }}>
-              Card Grouping
+              Card Structure
             </div>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
+                  Section Name
+                </label>
+                <input
+                  type="text"
+                  value={form.section_name || ""}
+                  placeholder="e.g., Operations, Finance, Clinical Quality"
+                  onChange={e => setForm({ ...form, section_name: e.target.value || undefined })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 6,
+                    fontSize: 14,
+                  }}
+                />
+                <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
+                  Cards in the same section appear together on the dashboard tab
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
+                  Section Order
+                </label>
+                <input
+                  type="number"
+                  value={form.section_order ?? 0}
+                  onChange={e => setForm({ ...form, section_order: parseInt(e.target.value) || 0 })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 6,
+                    fontSize: 14,
+                  }}
+                  min="0"
+                />
+                <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
+                  Lower numbers appear first
+                </div>
+              </div>
+            </div>
+
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
               <div>
                 <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
@@ -471,7 +521,7 @@ export default function AdminCards() {
                 <input
                   type="text"
                   value={form.group_name || ""}
-                  placeholder="e.g., Revenue Metrics, Customer Data (leave empty for no group)"
+                  placeholder="e.g., Revenue Metrics, Customer Data"
                   onChange={e => setForm({ ...form, group_name: e.target.value || undefined })}
                   style={{
                     width: "100%",
@@ -482,7 +532,7 @@ export default function AdminCards() {
                   }}
                 />
                 <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
-                  Cards with the same group name will be displayed together
+                  Cards with the same section + group will be displayed together
                 </div>
               </div>
 

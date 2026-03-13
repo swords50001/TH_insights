@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { DashboardCard as CardView, ConditionalFormattingRule, PivotConfig } from "../DashboardCard";
-import { toGroupAnchorId } from "../groupAnchors";
+import { toSectionAnchorId } from "../groupAnchors";
 
 type VisualizationType = "metric" | "table" | "chart";
 
@@ -13,6 +13,8 @@ export type Card = {
 	drilldown_query?: string;
 	group_name?: string;
 	group_order?: number;
+	section_name?: string;
+	section_order?: number;
 	header_bg_color?: string;
 	header_text_color?: string;
 	hide_title?: boolean;
@@ -357,25 +359,49 @@ export function DashboardGrid({
 		window.addEventListener("mouseup", onUp);
 	};
 
-	// Group cards by group_name
-	const groupedCards = cards.reduce((acc, card) => {
-		const groupName = card.group_name || '__ungrouped__';
-		if (!acc[groupName]) {
-			acc[groupName] = {
-				cards: [],
-				order: card.group_order || 0,
-				headerBgColor: card.header_bg_color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-				headerTextColor: card.header_text_color || '#ffffff',
+	type GroupBucket = {
+		cards: PositionedCard[];
+		order: number;
+		headerBgColor: string;
+		headerTextColor: string;
+	};
+
+	type SectionBucket = {
+		order: number;
+		groups: Record<string, GroupBucket>;
+	};
+
+	const groupedBySection = cards.reduce((acc, card) => {
+		const sectionName = card.section_name?.trim() || "General";
+		const groupName = card.group_name?.trim() || "Ungrouped";
+
+		if (!acc[sectionName]) {
+			acc[sectionName] = {
+				order: card.section_order ?? 0,
+				groups: {},
 			};
 		}
-		acc[groupName].cards.push(card);
-		return acc;
-	}, {} as Record<string, { cards: PositionedCard[]; order: number; headerBgColor: string; headerTextColor: string }>);
 
-	// Sort groups by order
-	const sortedGroups = Object.entries(groupedCards).sort(
-		([, a], [, b]) => a.order - b.order
-	);
+		const section = acc[sectionName];
+		if (!section.groups[groupName]) {
+			section.groups[groupName] = {
+				cards: [],
+				order: card.group_order ?? 0,
+				headerBgColor: card.header_bg_color || "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+				headerTextColor: card.header_text_color || "#ffffff",
+			};
+		}
+
+		section.groups[groupName].cards.push(card);
+		return acc;
+	}, {} as Record<string, SectionBucket>);
+
+	const sortedSections = Object.entries(groupedBySection)
+		.sort(([, a], [, b]) => a.order - b.order)
+		.map(([sectionName, section]) => {
+			const groups = Object.entries(section.groups).sort(([, a], [, b]) => a.order - b.order);
+			return { sectionName, section, groups };
+		});
 
 	// Calculate required height for the grid
 	const maxY = cards.reduce((max, card) => Math.max(max, card.y + card.height), 0);
@@ -407,133 +433,135 @@ export function DashboardGrid({
 					paddingBottom: "40px",
 				}}
 			>
-			{sortedGroups.map(([groupName, group]) => {
-				const position = groupPositions.find(p => p.groupName === groupName);
-				const containerStyle: React.CSSProperties = {
-					marginBottom: 32,
-					...(groupName !== '__ungrouped__' && !readOnly ? {
-						position: "absolute" as const,
-						left: position?.x || 0,
-						top: position?.y || 0,
-					width: position?.width ? `${position.width}px` : "600px",
-					height: position?.height ? `${position.height}px` : "auto",
-					resize: "both",
-					overflow: "auto",
-					minHeight: "350px",
-					minWidth: "300px",
-					maxHeight: "2000px",
-					maxWidth: "100%",
-					borderRadius: "8px",
-					boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-					zIndex: 1,
-				} : groupName !== '__ungrouped__' ? {
-					position: "absolute" as const,
-					left: position?.x || 0,
-					top: position?.y || 0,
-					width: position?.width ? `${position.width}px` : "auto",
-					height: position?.height ? `${position.height}px` : "auto",
-					overflow: "auto",
-					minHeight: "350px",
-					minWidth: "300px",
-					maxHeight: "2000px",
-					maxWidth: "100%",
-					borderRadius: "8px",
-					boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-					zIndex: 1,
-				} : {}),
-		};
-		
-		return (
-			<div
-				key={groupName}
-				id={groupName !== '__ungrouped__' ? toGroupAnchorId(groupName) : undefined}
-				data-group-name={groupName}
-				style={containerStyle}
-			>
-				{/* Group Header */}
-				{groupName !== '__ungrouped__' && (
+			{sortedSections.map(({ sectionName, groups }) => (
+				<div
+					key={sectionName}
+					id={toSectionAnchorId(sectionName)}
+					style={{ marginBottom: 40 }}
+				>
 					<div
-						onMouseDown={(e) => handleGroupDrag(groupName, e)}
 						style={{
-							background: group.headerBgColor,
-							color: group.headerTextColor,
-							padding: "16px 24px",
-							borderRadius: "8px 8px 0 0",
-							fontSize: 20,
-							fontWeight: 600,
-							marginBottom: 0,
-							boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-							cursor: readOnly ? "default" : "move",
-							userSelect: "none" as const,
+							padding: "10px 16px",
+							marginBottom: 16,
+							borderRadius: 8,
+							background: "#e5e7eb",
+							color: "#1f2937",
+							fontSize: 18,
+							fontWeight: 700,
 						}}
 					>
-						{groupName}
+						{sectionName}
 					</div>
-				)}
 
+					{groups.map(([groupName, group]) => {
+						const position = groupPositions.find((p) => p.groupName === groupName);
+						const containerStyle: React.CSSProperties = {
+							marginBottom: 32,
+							...(readOnly
+								? {
+									position: "relative" as const,
+								}
+								: {
+									position: "absolute" as const,
+									left: position?.x || 0,
+									top: position?.y || 0,
+									width: position?.width ? `${position.width}px` : "600px",
+									height: position?.height ? `${position.height}px` : "auto",
+									resize: "both",
+									overflow: "auto",
+									minHeight: "350px",
+									minWidth: "300px",
+									maxHeight: "2000px",
+									maxWidth: "100%",
+									borderRadius: "8px",
+									boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+									zIndex: 1,
+								}),
+						};
 
-					{/* Group Container */}
-					<div
-						style={{
-							position: "relative",
-							minHeight: "300px",
-							background: groupName !== '__ungrouped__' ? "#fff" : "#f9fafb",
-							padding: 16,
-							boxSizing: "border-box",
-							borderRadius: groupName !== '__ungrouped__' ? "0 0 8px 8px" : "8px",
-							border: groupName !== '__ungrouped__' ? "1px solid #e5e7eb" : "none",
-							boxShadow: groupName !== '__ungrouped__' ? "0 4px 12px rgba(0,0,0,0.05)" : "none",
-							overflow: "visible",
-						}}
-					>
-						{/* Grid background */}
-						<div
-							style={{
-								position: "absolute",
-								top: 0,
-								left: 0,
-								right: 0,
-								bottom: 0,
-								backgroundImage: `
-									linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-									linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
-								`,
-								backgroundSize: `${100 / GRID_SIZE}% ${CELL_HEIGHT}px`,
-								opacity: 0.3,
-								pointerEvents: "none",
-							}}
-						/>
+						return (
+							<div key={`${sectionName}-${groupName}`} data-group-name={groupName} style={containerStyle}>
+								<div
+									onMouseDown={(e) => handleGroupDrag(groupName, e)}
+									style={{
+										background: group.headerBgColor,
+										color: group.headerTextColor,
+										padding: "16px 24px",
+										borderRadius: "8px 8px 0 0",
+										fontSize: 20,
+										fontWeight: 600,
+										marginBottom: 0,
+										boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+										cursor: readOnly ? "default" : "move",
+										userSelect: "none" as const,
+									}}
+								>
+									{groupName}
+								</div>
 
-						{/* Cards in this group */}
-						{group.cards.map((card) => (
-							<GridCard
-								key={card.id}
-								card={card}
-								readOnly={readOnly}
-								onMove={(dx, dy) => updateCardPosition(card.id, dx, dy)}
-								onResize={(dw, dh) => updateCardSize(card.id, dw, dh)}
-								onRemove={onCardRemoved ? () => onCardRemoved(card.id) : undefined}
-								filters={filters}							onExpand={readOnly ? () => setExpandedCard(card) : undefined}							/>
-						))}
+								<div
+									style={{
+										position: "relative",
+										minHeight: "300px",
+										background: "#fff",
+										padding: 16,
+										boxSizing: "border-box",
+										borderRadius: "0 0 8px 8px",
+										border: "1px solid #e5e7eb",
+										boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+										overflow: "visible",
+									}}
+								>
+									<div
+										style={{
+											position: "absolute",
+											top: 0,
+											left: 0,
+											right: 0,
+											bottom: 0,
+											backgroundImage: `
+												linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+												linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
+											`,
+											backgroundSize: `${100 / GRID_SIZE}% ${CELL_HEIGHT}px`,
+											opacity: 0.3,
+											pointerEvents: "none",
+										}}
+									/>
 
-						{group.cards.length === 0 && (
-							<div
-								style={{
-									position: "absolute",
-									top: "50%",
-									left: "50%",
-									transform: "translate(-50%, -50%)",
-									textAlign: "center",
-									color: "#9ca3af",
-								}}
-							>
-								<p style={{ fontSize: 14 }}>No cards in this group</p>
+									{group.cards.map((card) => (
+										<GridCard
+											key={card.id}
+											card={card}
+											readOnly={readOnly}
+											onMove={(dx, dy) => updateCardPosition(card.id, dx, dy)}
+											onResize={(dw, dh) => updateCardSize(card.id, dw, dh)}
+											onRemove={onCardRemoved ? () => onCardRemoved(card.id) : undefined}
+											filters={filters}
+											onExpand={readOnly ? () => setExpandedCard(card) : undefined}
+										/>
+									))}
+
+									{group.cards.length === 0 && (
+										<div
+											style={{
+												position: "absolute",
+												top: "50%",
+												left: "50%",
+												transform: "translate(-50%, -50%)",
+												textAlign: "center",
+												color: "#9ca3af",
+											}}
+										>
+											<p style={{ fontSize: 14 }}>No cards in this group</p>
+										</div>
+									)}
+								</div>
 							</div>
-						)}
-					</div>
+						);
+					})}
 				</div>
-			);
-		})}
+			))}
 
 			{cards.length === 0 && (
 				<div

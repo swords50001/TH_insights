@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { getPublishedLayout } from '../publishedLayout';
-import { toGroupAnchorId } from '../groupAnchors';
+import { toSectionAnchorId } from '../groupAnchors';
 
 interface SidebarProps {
   onWidthChange: (width: number) => void;
@@ -26,7 +26,7 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
   const [isResizing, setIsResizing] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [dashboardGroups, setDashboardGroups] = useState<string[]>([]);
+  const [dashboardSections, setDashboardSections] = useState<string[]>([]);
   const [isDashboardAccordionOpen, setIsDashboardAccordionOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
@@ -45,9 +45,9 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
   }, [location.pathname]);
 
   React.useEffect(() => {
-    const parseStoredGroups = () => {
+    const parseStoredSections = () => {
       try {
-        const stored = localStorage.getItem('dashboard:groups');
+        const stored = localStorage.getItem('dashboard:sections');
         if (!stored) return null;
         const parsed = JSON.parse(stored);
         return Array.isArray(parsed) ? parsed.filter(Boolean) : null;
@@ -56,29 +56,32 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
       }
     };
 
-    const extractGroupNames = (cards: any[]) => {
+    const extractSectionNames = (cards: any[]) => {
       const grouped = cards
-        .filter((card) => card.group_name && card.group_name !== '__ungrouped__')
-        .sort((a, b) => (a.group_order ?? 0) - (b.group_order ?? 0));
+        .map((card) => ({
+          section_name: card.section_name || 'General',
+          section_order: card.section_order ?? 0,
+        }))
+        .sort((a, b) => (a.section_order ?? 0) - (b.section_order ?? 0));
 
       const seen = new Set<string>();
       const names: string[] = [];
 
       grouped.forEach((card) => {
-        const groupName = String(card.group_name);
-        if (!seen.has(groupName)) {
-          seen.add(groupName);
-          names.push(groupName);
+        const sectionName = String(card.section_name);
+        if (!seen.has(sectionName)) {
+          seen.add(sectionName);
+          names.push(sectionName);
         }
       });
 
       return names;
     };
 
-    const loadDashboardGroups = async () => {
-      const cachedGroups = parseStoredGroups();
-      if (cachedGroups) {
-        setDashboardGroups(cachedGroups);
+    const loadDashboardSections = async () => {
+      const cachedSections = parseStoredSections();
+      if (cachedSections) {
+        setDashboardSections(cachedSections);
       }
 
       try {
@@ -92,31 +95,31 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
         }
 
         if (!tabId) {
-          if (!cachedGroups) setDashboardGroups([]);
+          if (!cachedSections) setDashboardSections([]);
           return;
         }
 
         const published = await getPublishedLayout(tabId);
-        const groups = extractGroupNames(published?.cards || []);
-        setDashboardGroups(groups);
-        localStorage.setItem('dashboard:groups', JSON.stringify(groups));
+        const sections = extractSectionNames(published?.cards || []);
+        setDashboardSections(sections);
+        localStorage.setItem('dashboard:sections', JSON.stringify(sections));
       } catch {
-        if (!cachedGroups) {
-          setDashboardGroups([]);
+        if (!cachedSections) {
+          setDashboardSections([]);
         }
       }
     };
 
     const handleGroupUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent<{ groups?: string[] }>;
-      if (customEvent.detail?.groups && Array.isArray(customEvent.detail.groups)) {
-        setDashboardGroups(customEvent.detail.groups);
+      const customEvent = event as CustomEvent<{ sections?: string[] }>;
+      if (customEvent.detail?.sections && Array.isArray(customEvent.detail.sections)) {
+        setDashboardSections(customEvent.detail.sections);
       } else {
-        loadDashboardGroups();
+        loadDashboardSections();
       }
     };
 
-    loadDashboardGroups();
+    loadDashboardSections();
     window.addEventListener('dashboard-groups-updated', handleGroupUpdate as EventListener);
 
     return () => {
@@ -364,31 +367,31 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
                   </button>
                 </div>
 
-                {isDashboardAccordionOpen && dashboardGroups.map((groupName) => {
-                  const groupAnchor = toGroupAnchorId(groupName);
-                  const groupActive = (location.pathname === '/dashboard' || location.pathname === '/') && activeHash === groupAnchor;
+                {isDashboardAccordionOpen && dashboardSections.map((sectionName) => {
+                  const sectionAnchor = toSectionAnchorId(sectionName);
+                  const sectionActive = (location.pathname === '/dashboard' || location.pathname === '/') && activeHash === sectionAnchor;
 
                   return (
                     <Link
-                      key={groupName}
-                      to={`/dashboard#${groupAnchor}`}
+                      key={sectionName}
+                      to={`/dashboard#${sectionAnchor}`}
                       style={{
                         display: 'block',
                         margin: '2px 16px 2px 44px',
                         padding: '8px 10px',
                         borderRadius: '6px',
                         textDecoration: 'none',
-                        color: groupActive ? '#1f2937' : '#6b7280',
-                        backgroundColor: groupActive ? '#f3f4f6' : 'transparent',
-                        border: groupActive ? '1px solid #e5e7eb' : '1px solid transparent',
+                        color: sectionActive ? '#1f2937' : '#6b7280',
+                        backgroundColor: sectionActive ? '#f3f4f6' : 'transparent',
+                        border: sectionActive ? '1px solid #e5e7eb' : '1px solid transparent',
                         fontSize: '13px',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                       }}
-                      title={groupName}
+                      title={sectionName}
                     >
-                      {groupName}
+                      {sectionName}
                     </Link>
                   );
                 })}

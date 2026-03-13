@@ -16,28 +16,30 @@ export function Dashboard() {
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const location = useLocation();
 
-  const extractGroupNames = (dashboardCards: PositionedCard[]) => {
+  const extractSectionNames = (dashboardCards: PositionedCard[]) => {
     const grouped = dashboardCards
-      .filter((card) => card.group_name && card.group_name !== "__ungrouped__")
-      .sort((a, b) => (a.group_order ?? 0) - (b.group_order ?? 0));
+      .map((card) => ({
+        sectionName: card.section_name?.trim() || "General",
+        sectionOrder: card.section_order ?? 0,
+      }))
+      .sort((a, b) => a.sectionOrder - b.sectionOrder);
 
     const seen = new Set<string>();
     const names: string[] = [];
 
-    grouped.forEach((card) => {
-      const groupName = card.group_name as string;
-      if (!seen.has(groupName)) {
-        seen.add(groupName);
-        names.push(groupName);
+    grouped.forEach((section) => {
+      if (!seen.has(section.sectionName)) {
+        seen.add(section.sectionName);
+        names.push(section.sectionName);
       }
     });
 
     return names;
   };
 
-  const publishSidebarGroupState = (dashboardCards: PositionedCard[], tabId: number | null) => {
-    const groupNames = extractGroupNames(dashboardCards);
-    localStorage.setItem("dashboard:groups", JSON.stringify(groupNames));
+  const publishSidebarSectionState = (dashboardCards: PositionedCard[], tabId: number | null) => {
+    const sectionNames = extractSectionNames(dashboardCards);
+    localStorage.setItem("dashboard:sections", JSON.stringify(sectionNames));
 
     if (tabId) {
       localStorage.setItem("dashboard:activeTabId", String(tabId));
@@ -45,7 +47,7 @@ export function Dashboard() {
 
     window.dispatchEvent(
       new CustomEvent("dashboard-groups-updated", {
-        detail: { groups: groupNames, activeTabId: tabId },
+        detail: { sections: sectionNames, activeTabId: tabId },
       })
     );
   };
@@ -124,7 +126,7 @@ export function Dashboard() {
           conditional_formatting: c.conditional_formatting 
         })));
         setCards(mergedCards);
-        publishSidebarGroupState(mergedCards, activeTabId);
+        publishSidebarSectionState(mergedCards, activeTabId);
         
         // Load group positions
         if (published.groupPositions) {
