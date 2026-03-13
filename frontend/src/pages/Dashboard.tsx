@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { DashboardGrid, PositionedCard, GroupPosition } from "../components/DashboardGrid";
 import { DashboardTabs, DashboardTab } from "../components/DashboardTabs";
 import { getPublishedLayout } from "../publishedLayout";
@@ -13,6 +14,41 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
+  const location = useLocation();
+
+  const extractGroupNames = (dashboardCards: PositionedCard[]) => {
+    const grouped = dashboardCards
+      .filter((card) => card.group_name && card.group_name !== "__ungrouped__")
+      .sort((a, b) => (a.group_order ?? 0) - (b.group_order ?? 0));
+
+    const seen = new Set<string>();
+    const names: string[] = [];
+
+    grouped.forEach((card) => {
+      const groupName = card.group_name as string;
+      if (!seen.has(groupName)) {
+        seen.add(groupName);
+        names.push(groupName);
+      }
+    });
+
+    return names;
+  };
+
+  const publishSidebarGroupState = (dashboardCards: PositionedCard[], tabId: number | null) => {
+    const groupNames = extractGroupNames(dashboardCards);
+    localStorage.setItem("dashboard:groups", JSON.stringify(groupNames));
+
+    if (tabId) {
+      localStorage.setItem("dashboard:activeTabId", String(tabId));
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("dashboard-groups-updated", {
+        detail: { groups: groupNames, activeTabId: tabId },
+      })
+    );
+  };
 
   // Load available dashboard tabs
   useEffect(() => {
@@ -88,6 +124,7 @@ export function Dashboard() {
           conditional_formatting: c.conditional_formatting 
         })));
         setCards(mergedCards);
+        publishSidebarGroupState(mergedCards, activeTabId);
         
         // Load group positions
         if (published.groupPositions) {
@@ -103,6 +140,26 @@ export function Dashboard() {
 
     loadDashboard();
   }, [activeTabId]);
+
+  useEffect(() => {
+    if (!activeTabId) return;
+    localStorage.setItem("dashboard:activeTabId", String(activeTabId));
+  }, [activeTabId]);
+
+  useEffect(() => {
+    if (loading || !cards.length || !location.hash) return;
+
+    const targetId = location.hash.replace("#", "");
+    const scrollToGroup = () => {
+      const target = document.getElementById(targetId);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    };
+
+    const timer = window.setTimeout(scrollToGroup, 100);
+    return () => window.clearTimeout(timer);
+  }, [location.hash, loading, cards]);
 
   const handleFilterChange = (filters: Record<string, any>) => {
     setFilterValues(filters);

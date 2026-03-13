@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { api } from '../api';
+import { getPublishedLayout } from '../publishedLayout';
+import { toGroupAnchorId } from '../groupAnchors';
 
 interface SidebarProps {
   onWidthChange: (width: number) => void;
@@ -23,6 +26,8 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
   const [isResizing, setIsResizing] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [dashboardGroups, setDashboardGroups] = useState<string[]>([]);
+  const [isDashboardAccordionOpen, setIsDashboardAccordionOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -32,6 +37,92 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
     setIsLoggedIn(!!token);
     setUserRole(getUserRole());
   }, [location]);
+
+  React.useEffect(() => {
+    if (location.pathname === '/dashboard' || location.pathname === '/') {
+      setIsDashboardAccordionOpen(true);
+    }
+  }, [location.pathname]);
+
+  React.useEffect(() => {
+    const parseStoredGroups = () => {
+      try {
+        const stored = localStorage.getItem('dashboard:groups');
+        if (!stored) return null;
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed.filter(Boolean) : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const extractGroupNames = (cards: any[]) => {
+      const grouped = cards
+        .filter((card) => card.group_name && card.group_name !== '__ungrouped__')
+        .sort((a, b) => (a.group_order ?? 0) - (b.group_order ?? 0));
+
+      const seen = new Set<string>();
+      const names: string[] = [];
+
+      grouped.forEach((card) => {
+        const groupName = String(card.group_name);
+        if (!seen.has(groupName)) {
+          seen.add(groupName);
+          names.push(groupName);
+        }
+      });
+
+      return names;
+    };
+
+    const loadDashboardGroups = async () => {
+      const cachedGroups = parseStoredGroups();
+      if (cachedGroups) {
+        setDashboardGroups(cachedGroups);
+      }
+
+      try {
+        const storedTabId = localStorage.getItem('dashboard:activeTabId');
+        let tabId = storedTabId ? Number(storedTabId) : NaN;
+
+        if (!tabId || Number.isNaN(tabId)) {
+          const tabsResponse = await api.get('/dashboards');
+          const tabs = Array.isArray(tabsResponse.data) ? tabsResponse.data : [];
+          tabId = tabs[0]?.id;
+        }
+
+        if (!tabId) {
+          if (!cachedGroups) setDashboardGroups([]);
+          return;
+        }
+
+        const published = await getPublishedLayout(tabId);
+        const groups = extractGroupNames(published?.cards || []);
+        setDashboardGroups(groups);
+        localStorage.setItem('dashboard:groups', JSON.stringify(groups));
+      } catch {
+        if (!cachedGroups) {
+          setDashboardGroups([]);
+        }
+      }
+    };
+
+    const handleGroupUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<{ groups?: string[] }>;
+      if (customEvent.detail?.groups && Array.isArray(customEvent.detail.groups)) {
+        setDashboardGroups(customEvent.detail.groups);
+      } else {
+        loadDashboardGroups();
+      }
+    };
+
+    loadDashboardGroups();
+    window.addEventListener('dashboard-groups-updated', handleGroupUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('dashboard-groups-updated', handleGroupUpdate as EventListener);
+    };
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -219,9 +310,92 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
       {/* Menu items */}
       <nav style={{ flex: 1, padding: '20px 0', overflowY: 'auto' }}>
         {menuItems.map((item) => {
+          const isDashboardItem = item.path === '/dashboard';
           const isActive = location.pathname === item.path || 
             (location.pathname === '/' && item.path === '/dashboard');
+
+          const activeHash = location.hash.replace('#', '');
           
+          if (isDashboardItem && !isCollapsed) {
+            return (
+              <div key={item.path}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    margin: '4px 8px',
+                    borderRadius: '6px',
+                    border: isActive ? '1px solid #e5e7eb' : '1px solid transparent',
+                    backgroundColor: isActive ? '#f3f4f6' : 'transparent',
+                  }}
+                >
+                  <Link
+                    to={item.path}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      flex: 1,
+                      padding: '12px 12px 12px 16px',
+                      textDecoration: 'none',
+                      color: isActive ? '#1f2937' : '#6b7280',
+                      borderRadius: '6px 0 0 6px',
+                      fontWeight: isActive ? 600 : 400,
+                    }}
+                  >
+                    <span style={{ fontSize: '20px', minWidth: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{item.icon}</span>
+                    <span style={{ marginLeft: '12px', fontSize: '14px' }}>{item.label}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setIsDashboardAccordionOpen((prev) => !prev)}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#6b7280',
+                      cursor: 'pointer',
+                      padding: '0 12px',
+                      height: '100%',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                    }}
+                    title={isDashboardAccordionOpen ? 'Collapse groups' : 'Expand groups'}
+                  >
+                    {isDashboardAccordionOpen ? '▾' : '▸'}
+                  </button>
+                </div>
+
+                {isDashboardAccordionOpen && dashboardGroups.map((groupName) => {
+                  const groupAnchor = toGroupAnchorId(groupName);
+                  const groupActive = (location.pathname === '/dashboard' || location.pathname === '/') && activeHash === groupAnchor;
+
+                  return (
+                    <Link
+                      key={groupName}
+                      to={`/dashboard#${groupAnchor}`}
+                      style={{
+                        display: 'block',
+                        margin: '2px 16px 2px 44px',
+                        padding: '8px 10px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        color: groupActive ? '#1f2937' : '#6b7280',
+                        backgroundColor: groupActive ? '#f3f4f6' : 'transparent',
+                        border: groupActive ? '1px solid #e5e7eb' : '1px solid transparent',
+                        fontSize: '13px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                      title={groupName}
+                    >
+                      {groupName}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          }
+
           return (
             <Link
               key={item.path}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { DashboardCard as CardView, ConditionalFormattingRule, PivotConfig } from "../DashboardCard";
+import { toGroupAnchorId } from "../groupAnchors";
 
 type VisualizationType = "metric" | "table" | "chart";
 
@@ -443,7 +444,12 @@ export function DashboardGrid({
 		};
 		
 		return (
-			<div key={groupName} data-group-name={groupName} style={containerStyle}>
+			<div
+				key={groupName}
+				id={groupName !== '__ungrouped__' ? toGroupAnchorId(groupName) : undefined}
+				data-group-name={groupName}
+				style={containerStyle}
+			>
 				{/* Group Header */}
 				{groupName !== '__ungrouped__' && (
 					<div
