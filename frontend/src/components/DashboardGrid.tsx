@@ -455,28 +455,23 @@ export function DashboardGrid({
 
 					{groups.map(([groupName, group]) => {
 						const position = groupPositions.find((p) => p.groupName === groupName);
+						const hasSavedPosition = !!position;
 						const containerStyle: React.CSSProperties = {
-							marginBottom: 32,
-							...(readOnly
-								? {
-									position: "relative" as const,
-								}
-								: {
-									position: "absolute" as const,
-									left: position?.x || 0,
-									top: position?.y || 0,
-									width: position?.width ? `${position.width}px` : "600px",
-									height: position?.height ? `${position.height}px` : "auto",
-									resize: "both",
-									overflow: "auto",
-									minHeight: "350px",
-									minWidth: "300px",
-									maxHeight: "2000px",
-									maxWidth: "100%",
-									borderRadius: "8px",
-									boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-									zIndex: 1,
-								}),
+							marginBottom: hasSavedPosition ? 0 : 32,
+							position: hasSavedPosition ? "absolute" : "relative",
+							left: hasSavedPosition ? (position?.x || 0) : undefined,
+							top: hasSavedPosition ? (position?.y || 0) : undefined,
+							width: hasSavedPosition ? (position?.width ? `${position.width}px` : "600px") : undefined,
+							height: hasSavedPosition ? (position?.height ? `${position.height}px` : "auto") : undefined,
+							overflow: hasSavedPosition ? "auto" : undefined,
+							minHeight: hasSavedPosition ? "350px" : undefined,
+							minWidth: hasSavedPosition ? "300px" : undefined,
+							maxHeight: hasSavedPosition ? "2000px" : undefined,
+							maxWidth: hasSavedPosition ? "100%" : undefined,
+							borderRadius: hasSavedPosition ? "8px" : undefined,
+							boxShadow: hasSavedPosition ? "0 4px 12px rgba(0,0,0,0.05)" : undefined,
+							zIndex: hasSavedPosition ? 1 : undefined,
+							resize: !readOnly && hasSavedPosition ? "both" : undefined,
 						};
 
 						return (

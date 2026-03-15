@@ -98,6 +98,11 @@ export function AdminDashboard() {
           return {
             ...publishedCard,
             ...freshCard, // Merge in latest card data
+            x: publishedCard.x ?? freshCard?.x ?? 0,
+            y: publishedCard.y ?? freshCard?.y ?? 0,
+            width: publishedCard.width ?? (publishedCard as any).w ?? freshCard?.width ?? 4,
+            height: publishedCard.height ?? (publishedCard as any).h ?? freshCard?.height ?? 2,
+            group_name: publishedCard.group_name ?? (publishedCard as any).group ?? freshCard?.group_name,
           };
         });
         

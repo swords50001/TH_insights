@@ -111,12 +111,11 @@ export function Dashboard() {
           return {
             ...publishedCard,
             ...freshCard, // This will include drill-down fields and conditional_formatting
-            // Ensure position data from published layout is preserved
-            x: publishedCard.x,
-            y: publishedCard.y,
-            w: publishedCard.w,
-            h: publishedCard.h,
-            group: publishedCard.group,
+            x: publishedCard.x ?? freshCard?.x ?? 0,
+            y: publishedCard.y ?? freshCard?.y ?? 0,
+            width: publishedCard.width ?? (publishedCard as any).w ?? freshCard?.width ?? 4,
+            height: publishedCard.height ?? (publishedCard as any).h ?? freshCard?.height ?? 2,
+            group_name: publishedCard.group_name ?? (publishedCard as any).group ?? freshCard?.group_name,
           };
         });
         

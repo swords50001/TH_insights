@@ -16,6 +16,26 @@ export interface PublishedLayout {
   publishedBy?: string;
 }
 
+function normalizePublishedCards(cards: any[]): PositionedCard[] {
+  return cards.map((card) => ({
+    ...card,
+    x: card.x ?? 0,
+    y: card.y ?? 0,
+    width: card.width ?? card.w ?? 4,
+    height: card.height ?? card.h ?? 2,
+    group_name: card.group_name ?? card.group,
+  })) as PositionedCard[];
+}
+
+function normalizePublishedLayout(layoutData: any): PublishedLayout | null {
+  if (!layoutData || !Array.isArray(layoutData.cards)) return null;
+  return {
+    ...layoutData,
+    cards: normalizePublishedCards(layoutData.cards),
+    groupPositions: Array.isArray(layoutData.groupPositions) ? layoutData.groupPositions : [],
+  };
+}
+
 // Fetch published layout from server (tenant-aware)
 export async function getPublishedLayout(dashboardId?: number): Promise<PublishedLayout | null> {
   try {
@@ -28,16 +48,16 @@ export async function getPublishedLayout(dashboardId?: number): Promise<Publishe
     // Server returns layout_data which contains the cards
     const layoutData = response.data.layout_data;
     if (typeof layoutData === 'string') {
-      return JSON.parse(layoutData);
+      return normalizePublishedLayout(JSON.parse(layoutData));
     }
-    return layoutData;
+    return normalizePublishedLayout(layoutData);
   } catch (err) {
     console.error("Failed to fetch published layout:", err);
     // Fallback to localStorage for backwards compatibility during migration
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (!stored) return null;
-      return JSON.parse(stored);
+      return normalizePublishedLayout(JSON.parse(stored));
     } catch {
       return null;
     }
