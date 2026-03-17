@@ -16,30 +16,52 @@ export function Dashboard() {
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const location = useLocation();
 
-  const extractSectionNames = (dashboardCards: PositionedCard[]) => {
+  const extractGroupNames = (dashboardCards: PositionedCard[], positions: GroupPosition[] = []) => {
     const grouped = dashboardCards
       .map((card) => ({
-        sectionName: card.section_name?.trim() || "General",
-        sectionOrder: card.section_order ?? 0,
-      }))
-      .sort((a, b) => a.sectionOrder - b.sectionOrder);
+        groupName: card.group_name?.trim() || "Ungrouped",
+        groupOrder: card.group_order ?? 0,
+      }));
 
     const seen = new Set<string>();
-    const names: string[] = [];
+    const fallbackOrder = new Map<string, number>();
+    grouped
+      .sort((a, b) => a.groupOrder - b.groupOrder)
+      .forEach((group, index) => {
+        if (!seen.has(group.groupName)) {
+          seen.add(group.groupName);
+          fallbackOrder.set(group.groupName, index);
+        }
+      });
 
-    grouped.forEach((section) => {
-      if (!seen.has(section.sectionName)) {
-        seen.add(section.sectionName);
-        names.push(section.sectionName);
-      }
+    const names = Array.from(fallbackOrder.keys());
+    const positionMap = new Map<string, GroupPosition>();
+    positions.forEach((position) => {
+      positionMap.set(position.groupName, position);
     });
 
-    return names;
+    return names.sort((a, b) => {
+      const posA = positionMap.get(a);
+      const posB = positionMap.get(b);
+
+      if (posA && posB) {
+        const yDiff = (posA.y ?? 0) - (posB.y ?? 0);
+        if (yDiff !== 0) return yDiff;
+        const xDiff = (posA.x ?? 0) - (posB.x ?? 0);
+        if (xDiff !== 0) return xDiff;
+      } else if (posA) {
+        return -1;
+      } else if (posB) {
+        return 1;
+      }
+
+      return (fallbackOrder.get(a) ?? 0) - (fallbackOrder.get(b) ?? 0);
+    });
   };
 
-  const publishSidebarSectionState = (dashboardCards: PositionedCard[], tabId: number | null) => {
-    const sectionNames = extractSectionNames(dashboardCards);
-    localStorage.setItem("dashboard:sections", JSON.stringify(sectionNames));
+  const publishSidebarGroupState = (dashboardCards: PositionedCard[], tabId: number | null, positions: GroupPosition[] = []) => {
+    const groupNames = extractGroupNames(dashboardCards, positions);
+    localStorage.setItem("dashboard:groups", JSON.stringify(groupNames));
 
     if (tabId) {
       localStorage.setItem("dashboard:activeTabId", String(tabId));
@@ -47,7 +69,7 @@ export function Dashboard() {
 
     window.dispatchEvent(
       new CustomEvent("dashboard-groups-updated", {
-        detail: { sections: sectionNames, activeTabId: tabId },
+        detail: { groups: groupNames, activeTabId: tabId },
       })
     );
   };
@@ -125,7 +147,7 @@ export function Dashboard() {
           conditional_formatting: c.conditional_formatting 
         })));
         setCards(mergedCards);
-        publishSidebarSectionState(mergedCards, activeTabId);
+        publishSidebarGroupState(mergedCards, activeTabId, published.groupPositions || []);
         
         // Load group positions
         if (published.groupPositions) {

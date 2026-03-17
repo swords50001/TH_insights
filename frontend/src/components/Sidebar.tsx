@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { getPublishedLayout } from '../publishedLayout';
-import { toSectionAnchorId } from '../groupAnchors';
+import { toGroupAnchorId } from '../groupAnchors';
 
 interface SidebarProps {
   onWidthChange: (width: number) => void;
@@ -26,7 +26,7 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
   const [isResizing, setIsResizing] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [dashboardSections, setDashboardSections] = useState<string[]>([]);
+  const [dashboardGroups, setDashboardGroups] = useState<string[]>([]);
   const [isDashboardAccordionOpen, setIsDashboardAccordionOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
@@ -45,9 +45,9 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
   }, [location.pathname]);
 
   React.useEffect(() => {
-    const parseStoredSections = () => {
+    const parseStoredGroups = () => {
       try {
-        const stored = localStorage.getItem('dashboard:sections');
+        const stored = localStorage.getItem('dashboard:groups');
         if (!stored) return null;
         const parsed = JSON.parse(stored);
         return Array.isArray(parsed) ? parsed.filter(Boolean) : null;
@@ -56,32 +56,56 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
       }
     };
 
-    const extractSectionNames = (cards: any[]) => {
+    const extractGroupNames = (cards: any[], groupPositions: any[] = []) => {
       const grouped = cards
         .map((card) => ({
-          section_name: card.section_name || 'General',
-          section_order: card.section_order ?? 0,
-        }))
-        .sort((a, b) => (a.section_order ?? 0) - (b.section_order ?? 0));
+          group_name: card.group_name || 'Ungrouped',
+          group_order: card.group_order ?? 0,
+        }));
 
       const seen = new Set<string>();
-      const names: string[] = [];
+      const fallbackOrder = new Map<string, number>();
+      grouped
+        .sort((a, b) => (a.group_order ?? 0) - (b.group_order ?? 0))
+        .forEach((card, index) => {
+          const groupName = String(card.group_name);
+          if (!seen.has(groupName)) {
+            seen.add(groupName);
+            fallbackOrder.set(groupName, index);
+          }
+        });
 
-      grouped.forEach((card) => {
-        const sectionName = String(card.section_name);
-        if (!seen.has(sectionName)) {
-          seen.add(sectionName);
-          names.push(sectionName);
+      const names = Array.from(fallbackOrder.keys());
+      const positionMap = new Map<string, { x?: number; y?: number }>();
+      (groupPositions || []).forEach((position: any) => {
+        if (position?.groupName) {
+          positionMap.set(String(position.groupName), { x: position.x, y: position.y });
         }
       });
 
-      return names;
+      return names.sort((a, b) => {
+        const posA = positionMap.get(a);
+        const posB = positionMap.get(b);
+
+        if (posA && posB) {
+          const yDiff = (posA.y ?? 0) - (posB.y ?? 0);
+          if (yDiff !== 0) return yDiff;
+          const xDiff = (posA.x ?? 0) - (posB.x ?? 0);
+          if (xDiff !== 0) return xDiff;
+        } else if (posA) {
+          return -1;
+        } else if (posB) {
+          return 1;
+        }
+
+        return (fallbackOrder.get(a) ?? 0) - (fallbackOrder.get(b) ?? 0);
+      });
     };
 
-    const loadDashboardSections = async () => {
-      const cachedSections = parseStoredSections();
-      if (cachedSections) {
-        setDashboardSections(cachedSections);
+    const loadDashboardGroups = async () => {
+      const cachedGroups = parseStoredGroups();
+      if (cachedGroups) {
+        setDashboardGroups(cachedGroups);
       }
 
       try {
@@ -95,31 +119,31 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
         }
 
         if (!tabId) {
-          if (!cachedSections) setDashboardSections([]);
+          if (!cachedGroups) setDashboardGroups([]);
           return;
         }
 
         const published = await getPublishedLayout(tabId);
-        const sections = extractSectionNames(published?.cards || []);
-        setDashboardSections(sections);
-        localStorage.setItem('dashboard:sections', JSON.stringify(sections));
+        const groups = extractGroupNames(published?.cards || [], published?.groupPositions || []);
+        setDashboardGroups(groups);
+        localStorage.setItem('dashboard:groups', JSON.stringify(groups));
       } catch {
-        if (!cachedSections) {
-          setDashboardSections([]);
+        if (!cachedGroups) {
+          setDashboardGroups([]);
         }
       }
     };
 
     const handleGroupUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent<{ sections?: string[] }>;
-      if (customEvent.detail?.sections && Array.isArray(customEvent.detail.sections)) {
-        setDashboardSections(customEvent.detail.sections);
+      const customEvent = event as CustomEvent<{ groups?: string[] }>;
+      if (customEvent.detail?.groups && Array.isArray(customEvent.detail.groups)) {
+        setDashboardGroups(customEvent.detail.groups);
       } else {
-        loadDashboardSections();
+        loadDashboardGroups();
       }
     };
 
-    loadDashboardSections();
+    loadDashboardGroups();
     window.addEventListener('dashboard-groups-updated', handleGroupUpdate as EventListener);
 
     return () => {
@@ -367,31 +391,31 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
                   </button>
                 </div>
 
-                {isDashboardAccordionOpen && dashboardSections.map((sectionName) => {
-                  const sectionAnchor = toSectionAnchorId(sectionName);
-                  const sectionActive = (location.pathname === '/dashboard' || location.pathname === '/') && activeHash === sectionAnchor;
+                {isDashboardAccordionOpen && dashboardGroups.map((groupName) => {
+                  const groupAnchor = toGroupAnchorId(groupName);
+                  const groupActive = (location.pathname === '/dashboard' || location.pathname === '/') && activeHash === groupAnchor;
 
                   return (
                     <Link
-                      key={sectionName}
-                      to={`/dashboard#${sectionAnchor}`}
+                      key={groupName}
+                      to={`/dashboard#${groupAnchor}`}
                       style={{
                         display: 'block',
                         margin: '2px 16px 2px 44px',
                         padding: '8px 10px',
                         borderRadius: '6px',
                         textDecoration: 'none',
-                        color: sectionActive ? '#1f2937' : '#6b7280',
-                        backgroundColor: sectionActive ? '#f3f4f6' : 'transparent',
-                        border: sectionActive ? '1px solid #e5e7eb' : '1px solid transparent',
+                        color: groupActive ? '#1f2937' : '#6b7280',
+                        backgroundColor: groupActive ? '#f3f4f6' : 'transparent',
+                        border: groupActive ? '1px solid #e5e7eb' : '1px solid transparent',
                         fontSize: '13px',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                       }}
-                      title={sectionName}
+                      title={groupName}
                     >
-                      {sectionName}
+                      {groupName}
                     </Link>
                   );
                 })}
@@ -406,7 +430,8 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '12px 16px',
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
+                padding: isCollapsed ? '12px 0' : '12px 16px',
                 margin: '4px 8px',
                 textDecoration: 'none',
                 color: isActive ? '#1f2937' : '#6b7280',
@@ -449,8 +474,9 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: isCollapsed ? 'center' : 'flex-start',
             width: '100%',
-            padding: '12px 16px',
+            padding: isCollapsed ? '12px 0' : '12px 16px',
             backgroundColor: 'transparent',
             border: '1px solid transparent',
             borderRadius: '6px',

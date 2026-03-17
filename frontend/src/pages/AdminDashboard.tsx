@@ -17,6 +17,64 @@ export function AdminDashboard() {
   const [showAvailableCards, setShowAvailableCards] = useState(false);
   const [showTabManager, setShowTabManager] = useState(false);
 
+  const extractGroupNames = (dashboardCards: PositionedCard[], positions: GroupPosition[] = []) => {
+    const grouped = dashboardCards
+      .map((card) => ({
+        groupName: card.group_name?.trim() || "Ungrouped",
+        groupOrder: card.group_order ?? 0,
+      }));
+
+    const seen = new Set<string>();
+    const fallbackOrder = new Map<string, number>();
+    grouped
+      .sort((a, b) => a.groupOrder - b.groupOrder)
+      .forEach((group, index) => {
+        if (!seen.has(group.groupName)) {
+          seen.add(group.groupName);
+          fallbackOrder.set(group.groupName, index);
+        }
+      });
+
+    const names = Array.from(fallbackOrder.keys());
+    const positionMap = new Map<string, GroupPosition>();
+    positions.forEach((position) => {
+      positionMap.set(position.groupName, position);
+    });
+
+    return names.sort((a, b) => {
+      const posA = positionMap.get(a);
+      const posB = positionMap.get(b);
+
+      if (posA && posB) {
+        const yDiff = (posA.y ?? 0) - (posB.y ?? 0);
+        if (yDiff !== 0) return yDiff;
+        const xDiff = (posA.x ?? 0) - (posB.x ?? 0);
+        if (xDiff !== 0) return xDiff;
+      } else if (posA) {
+        return -1;
+      } else if (posB) {
+        return 1;
+      }
+
+      return (fallbackOrder.get(a) ?? 0) - (fallbackOrder.get(b) ?? 0);
+    });
+  };
+
+  const publishSidebarGroupState = (dashboardCards: PositionedCard[], tabId: number | null, positions: GroupPosition[] = []) => {
+    const groupNames = extractGroupNames(dashboardCards, positions);
+    localStorage.setItem("dashboard:groups", JSON.stringify(groupNames));
+
+    if (tabId) {
+      localStorage.setItem("dashboard:activeTabId", String(tabId));
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("dashboard-groups-updated", {
+        detail: { groups: groupNames, activeTabId: tabId },
+      })
+    );
+  };
+
   // Load dashboard tabs
   const loadTabs = async () => {
     try {
@@ -117,6 +175,7 @@ export function AdminDashboard() {
       }
 
       setCards(positionedCards);
+      publishSidebarGroupState(positionedCards, activeTabId, published?.groupPositions || []);
     } catch (err: any) {
       console.error("Failed to fetch dashboard cards:", err);
       setError(err.message || "Failed to load dashboard");
@@ -127,6 +186,7 @@ export function AdminDashboard() {
 
   useEffect(() => {
     if (activeTabId) {
+      localStorage.setItem("dashboard:activeTabId", String(activeTabId));
       loadDashboard();
     }
   }, [activeTabId]);
@@ -220,6 +280,7 @@ export function AdminDashboard() {
       });
       
       await publishLayout(cards, updatedGroupPositions, "admin", activeTabId);
+      publishSidebarGroupState(cards, activeTabId, updatedGroupPositions);
       setPublishSuccess(true);
       setTimeout(() => setPublishSuccess(false), 3000);
     } catch (err) {
