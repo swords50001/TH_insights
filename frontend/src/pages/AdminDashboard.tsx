@@ -16,8 +16,15 @@ export function AdminDashboard() {
   const [publishSuccess, setPublishSuccess] = useState(false);
   const [showAvailableCards, setShowAvailableCards] = useState(false);
   const [showTabManager, setShowTabManager] = useState(false);
+  const [showSidebarGroups, setShowSidebarGroups] = useState(false);
+  const [groupSidebarVisibility, setGroupSidebarVisibility] = useState<Record<string, boolean>>({});
 
-  const extractGroupNames = (dashboardCards: PositionedCard[], positions: GroupPosition[] = []) => {
+  const extractGroupNames = (
+    dashboardCards: PositionedCard[],
+    positions: GroupPosition[] = [],
+    visibilityOverrides?: Record<string, boolean>,
+    includeHidden = false
+  ) => {
     const grouped = dashboardCards
       .map((card) => ({
         groupName: card.group_name?.trim() || "Ungrouped",
@@ -58,10 +65,27 @@ export function AdminDashboard() {
 
       return (fallbackOrder.get(a) ?? 0) - (fallbackOrder.get(b) ?? 0);
     });
+
+    if (includeHidden) {
+      return names;
+    }
+
+    return names.filter((groupName) => {
+      const overrideValue = visibilityOverrides?.[groupName];
+      if (overrideValue !== undefined) return overrideValue;
+
+      const existing = positions.find((p) => p.groupName === groupName);
+      return existing?.showInSidebar !== false;
+    });
   };
 
-  const publishSidebarGroupState = (dashboardCards: PositionedCard[], tabId: number | null, positions: GroupPosition[] = []) => {
-    const groupNames = extractGroupNames(dashboardCards, positions);
+  const publishSidebarGroupState = (
+    dashboardCards: PositionedCard[],
+    tabId: number | null,
+    positions: GroupPosition[] = [],
+    visibilityOverrides?: Record<string, boolean>
+  ) => {
+    const groupNames = extractGroupNames(dashboardCards, positions, visibilityOverrides);
     localStorage.setItem("dashboard:groups", JSON.stringify(groupNames));
 
     if (tabId) {
@@ -175,6 +199,17 @@ export function AdminDashboard() {
       }
 
       setCards(positionedCards);
+      const visibilityMap: Record<string, boolean> = {};
+      const groupNames = extractGroupNames(positionedCards, published?.groupPositions || []);
+      groupNames.forEach((groupName) => {
+        visibilityMap[groupName] = true;
+      });
+      (published?.groupPositions || []).forEach((position) => {
+        if (position.groupName) {
+          visibilityMap[position.groupName] = position.showInSidebar !== false;
+        }
+      });
+      setGroupSidebarVisibility(visibilityMap);
       publishSidebarGroupState(positionedCards, activeTabId, published?.groupPositions || []);
     } catch (err: any) {
       console.error("Failed to fetch dashboard cards:", err);
@@ -275,6 +310,7 @@ export function AdminDashboard() {
             y: existing?.y || container.offsetTop,
             width: container.offsetWidth,
             height: container.offsetHeight,
+            showInSidebar: groupSidebarVisibility[groupName] !== false,
           });
         }
       });
@@ -399,6 +435,20 @@ export function AdminDashboard() {
           >
             + Add Cards
           </button>
+          <button
+            onClick={() => setShowSidebarGroups(true)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 6,
+              border: "1px solid #6366f1",
+              background: "#6366f1",
+              color: "#fff",
+              cursor: "pointer",
+              fontWeight: 500,
+            }}
+          >
+            Sidebar Groups
+          </button>
           <button 
             onClick={handlePublish}
             style={{
@@ -437,6 +487,95 @@ export function AdminDashboard() {
         onGroupMoved={handleGroupMoved}
         onGroupResized={handleGroupResized}
       />
+
+      {/* Sidebar Group Visibility Modal */}
+      {showSidebarGroups && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setShowSidebarGroups(false)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 8,
+              padding: 24,
+              width: "100%",
+              maxWidth: 560,
+              maxHeight: "80vh",
+              overflow: "auto",
+              boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 8px 0", fontSize: 20 }}>Sidebar Accordion Groups</h2>
+            <p style={{ margin: "0 0 16px 0", fontSize: 14, color: "#6b7280" }}>
+              Choose which groups appear in the sidebar accordion for this tab.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {extractGroupNames(cards, groupPositions, groupSidebarVisibility, true).map((groupName) => (
+                <label
+                  key={groupName}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "10px 12px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 14, color: "#111827", fontWeight: 500 }}>{groupName}</span>
+                  <input
+                    type="checkbox"
+                    checked={groupSidebarVisibility[groupName] !== false}
+                    onChange={(e) => {
+                      const updated = {
+                        ...groupSidebarVisibility,
+                        [groupName]: e.target.checked,
+                      };
+                      setGroupSidebarVisibility(updated);
+                      publishSidebarGroupState(cards, activeTabId, groupPositions, updated);
+                    }}
+                  />
+                </label>
+              ))}
+              {extractGroupNames(cards, groupPositions, groupSidebarVisibility, true).length === 0 && (
+                <div style={{ padding: 12, color: "#6b7280", fontSize: 14 }}>
+                  No groups available on this tab.
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowSidebarGroups(false)}
+              style={{
+                marginTop: 16,
+                padding: "8px 16px",
+                borderRadius: 6,
+                border: "1px solid #e5e7eb",
+                background: "#fff",
+                cursor: "pointer",
+                width: "100%",
+              }}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Available Cards Modal */}
       {showAvailableCards && (

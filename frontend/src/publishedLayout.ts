@@ -7,6 +7,9 @@ export interface GroupPosition {
   groupName: string;
   x: number;
   y: number;
+  width?: number;
+  height?: number;
+  showInSidebar?: boolean;
 }
 
 export interface PublishedLayout {

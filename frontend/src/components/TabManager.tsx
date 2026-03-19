@@ -40,6 +40,8 @@ const COLOR_OPTIONS = [
 
 export function TabManager({ tabs, activeTabId, onClose, onUpdate }: TabManagerProps) {
   const [editingTab, setEditingTab] = useState<DashboardTab | null>(null);
+  const [orderedTabs, setOrderedTabs] = useState<DashboardTab[]>([]);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -48,6 +50,43 @@ export function TabManager({ tabs, activeTabId, onClose, onUpdate }: TabManagerP
   });
   const [duplicateSource, setDuplicateSource] = useState<number | null>(null);
   const [duplicateTarget, setDuplicateTarget] = useState<number | null>(null);
+
+  React.useEffect(() => {
+    setOrderedTabs([...tabs].sort((a, b) => a.tab_order - b.tab_order));
+  }, [tabs]);
+
+  const moveTab = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= orderedTabs.length) return;
+
+    const updated = [...orderedTabs];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(target, 0, moved);
+    setOrderedTabs(updated.map((tab, i) => ({ ...tab, tab_order: i })));
+  };
+
+  const saveTabOrder = async () => {
+    try {
+      setIsSavingOrder(true);
+      await Promise.all(
+        orderedTabs.map((tab, index) =>
+          api.put(`/admin/dashboards/${tab.id}`, {
+            name: tab.name,
+            description: tab.description,
+            icon: tab.icon,
+            color: tab.color,
+            tab_order: index,
+            is_active: true,
+          })
+        )
+      );
+      onUpdate();
+    } catch (err: any) {
+      alert("Failed to save tab order: " + err.message);
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
 
   const handleEdit = (tab: DashboardTab) => {
     setEditingTab(tab);
@@ -164,25 +203,43 @@ export function TabManager({ tabs, activeTabId, onClose, onUpdate }: TabManagerP
             <div style={{ marginBottom: 24 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <h3 style={{ margin: 0, fontSize: 18, color: "#374151" }}>Dashboard Tabs</h3>
-                <button
-                  onClick={handleCreate}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: "#3b82f6",
-                    color: "#fff",
-                    cursor: "pointer",
-                    fontSize: 14,
-                    fontWeight: 500,
-                  }}
-                >
-                  + New Tab
-                </button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={saveTabOrder}
+                    disabled={isSavingOrder}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 6,
+                      border: "none",
+                      background: isSavingOrder ? "#9ca3af" : "#10b981",
+                      color: "#fff",
+                      cursor: isSavingOrder ? "not-allowed" : "pointer",
+                      fontSize: 14,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {isSavingOrder ? "Saving..." : "Save Tab Order"}
+                  </button>
+                  <button
+                    onClick={handleCreate}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 6,
+                      border: "none",
+                      background: "#3b82f6",
+                      color: "#fff",
+                      cursor: "pointer",
+                      fontSize: 14,
+                      fontWeight: 500,
+                    }}
+                  >
+                    + New Tab
+                  </button>
+                </div>
               </div>
               
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {tabs.map((tab) => (
+                {orderedTabs.map((tab, index) => (
                   <div
                     key={tab.id}
                     style={{
@@ -209,6 +266,42 @@ export function TabManager({ tabs, activeTabId, onClose, onUpdate }: TabManagerP
                       {tab.description && (
                         <div style={{ fontSize: 12, color: "#6b7280" }}>{tab.description}</div>
                       )}
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button
+                        onClick={() => moveTab(index, -1)}
+                        disabled={index === 0}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 4,
+                          border: "1px solid #d1d5db",
+                          background: index === 0 ? "#f3f4f6" : "#fff",
+                          color: index === 0 ? "#9ca3af" : "#374151",
+                          cursor: index === 0 ? "not-allowed" : "pointer",
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                        title="Move up"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => moveTab(index, 1)}
+                        disabled={index === orderedTabs.length - 1}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 4,
+                          border: "1px solid #d1d5db",
+                          background: index === orderedTabs.length - 1 ? "#f3f4f6" : "#fff",
+                          color: index === orderedTabs.length - 1 ? "#9ca3af" : "#374151",
+                          cursor: index === orderedTabs.length - 1 ? "not-allowed" : "pointer",
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                        title="Move down"
+                      >
+                        ↓
+                      </button>
                     </div>
                     <button
                       onClick={() => handleEdit(tab)}

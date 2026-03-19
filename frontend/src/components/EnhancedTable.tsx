@@ -223,7 +223,7 @@ export function EnhancedTable({ data, title, cardId, drilldownEnabled, drilldown
 
         // Apply conditional formatting rules
         if (formattingRules && formattingRules.length > 0) {
-          const rule = formattingRules.find(r => r.column === key);
+          const rule = formattingRules.find((r) => matchesColumnName(r.column, key));
           if (rule && shouldApplyRule(value, rule)) {
             cellStyle.backgroundColor = rule.bgColor;
             cellStyle.color = rule.textColor;
@@ -519,4 +519,32 @@ function shouldApplyRule(
     default:
       return false;
   }
+}
+
+function normalizeColumnName(value: string): string {
+  return value
+    .trim()
+    .replace(/["'`\[\]]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function matchesColumnName(ruleColumn: string, dataColumn: string): boolean {
+  const normalizedRule = normalizeColumnName(ruleColumn || "");
+  const normalizedData = normalizeColumnName(dataColumn || "");
+
+  if (!normalizedRule || !normalizedData) return false;
+  if (normalizedRule === normalizedData) return true;
+
+  const dataColumnWithoutPrefix = (dataColumn || "").split(".").pop() || "";
+  const ruleColumnWithoutPrefix = (ruleColumn || "").split(".").pop() || "";
+
+  const normalizedDataNoPrefix = normalizeColumnName(dataColumnWithoutPrefix);
+  const normalizedRuleNoPrefix = normalizeColumnName(ruleColumnWithoutPrefix);
+
+  if (normalizedRule === normalizedDataNoPrefix) return true;
+  if (normalizedRuleNoPrefix === normalizedData) return true;
+  if (normalizedRuleNoPrefix === normalizedDataNoPrefix) return true;
+
+  return false;
 }

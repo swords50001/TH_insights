@@ -62,7 +62,7 @@ export function PivotTable({ data, rawData, pivotConfig, title, fontSize = "medi
       return baseStyle;
     }
 
-    const rule = conditionalFormatting.find(r => r.column === columnName);
+    const rule = conditionalFormatting.find(r => matchesColumnName(r.column, columnName));
     if (rule && shouldApplyRule(value, rule)) {
       return {
         ...baseStyle,
@@ -199,7 +199,7 @@ export function PivotTable({ data, rawData, pivotConfig, title, fontSize = "medi
                       return (
                         <td
                           key={colIdx}
-                          style={{
+                          style={getCellStyle(col, value, {
                             padding: "10px 16px",
                             borderBottom: "1px solid #e5e7eb",
                             borderRight: isRowHeader ? "2px solid #e5e7eb" : "1px solid #e5e7eb",
@@ -210,7 +210,7 @@ export function PivotTable({ data, rawData, pivotConfig, title, fontSize = "medi
                             position: isRowHeader ? "sticky" : "relative",
                             left: isRowHeader ? 0 : "auto",
                             zIndex: isRowHeader ? 1 : 0,
-                          }}
+                          })}
                         >
                           {isRowHeader && canExpand && (
                             <span style={{ marginRight: 8, fontSize: 12, color: "#6b7280" }}>
@@ -302,4 +302,32 @@ export function PivotTable({ data, rawData, pivotConfig, title, fontSize = "medi
       </div>
     </div>
   );
+}
+
+function normalizeColumnName(value: string): string {
+  return value
+    .trim()
+    .replace(/["'`\[\]]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function matchesColumnName(ruleColumn: string, dataColumn: string): boolean {
+  const normalizedRule = normalizeColumnName(ruleColumn || "");
+  const normalizedData = normalizeColumnName(dataColumn || "");
+
+  if (!normalizedRule || !normalizedData) return false;
+  if (normalizedRule === normalizedData) return true;
+
+  const dataColumnWithoutPrefix = (dataColumn || "").split(".").pop() || "";
+  const ruleColumnWithoutPrefix = (ruleColumn || "").split(".").pop() || "";
+
+  const normalizedDataNoPrefix = normalizeColumnName(dataColumnWithoutPrefix);
+  const normalizedRuleNoPrefix = normalizeColumnName(ruleColumnWithoutPrefix);
+
+  if (normalizedRule === normalizedDataNoPrefix) return true;
+  if (normalizedRuleNoPrefix === normalizedData) return true;
+  if (normalizedRuleNoPrefix === normalizedDataNoPrefix) return true;
+
+  return false;
 }

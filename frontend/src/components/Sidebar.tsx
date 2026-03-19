@@ -76,14 +76,23 @@ export function Sidebar({ onWidthChange, onCollapseChange }: SidebarProps) {
         });
 
       const names = Array.from(fallbackOrder.keys());
-      const positionMap = new Map<string, { x?: number; y?: number }>();
+      const positionMap = new Map<string, { x?: number; y?: number; showInSidebar?: boolean }>();
       (groupPositions || []).forEach((position: any) => {
         if (position?.groupName) {
-          positionMap.set(String(position.groupName), { x: position.x, y: position.y });
+          positionMap.set(String(position.groupName), {
+            x: position.x,
+            y: position.y,
+            showInSidebar: position.showInSidebar,
+          });
         }
       });
 
-      return names.sort((a, b) => {
+      const visibleNames = names.filter((name) => {
+        const position = positionMap.get(name);
+        return position?.showInSidebar !== false;
+      });
+
+      return visibleNames.sort((a, b) => {
         const posA = positionMap.get(a);
         const posB = positionMap.get(b);
 

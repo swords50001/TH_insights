@@ -126,6 +126,31 @@ export default function AdminCards() {
   const [previewData, setPreviewData] = useState<any[] | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [sortColumn, setSortColumn] = useState<"title" | "description" | "visualization_type" | "sql_query" | "is_active">("title");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const sortCards = (column: "title" | "description" | "visualization_type" | "sql_query" | "is_active") => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const sortedCards = [...cards].sort((a, b) => {
+    let comparison = 0;
+
+    if (sortColumn === "is_active") {
+      comparison = Number(a.is_active) - Number(b.is_active);
+    } else {
+      const aValue = String(a[sortColumn] || "").toLowerCase();
+      const bValue = String(b[sortColumn] || "").toLowerCase();
+      comparison = aValue.localeCompare(bValue);
+    }
+
+    return sortDirection === "asc" ? comparison : -comparison;
+  });
 
   const load = () => {
     api.get("/admin/cards").then(r => {
@@ -1165,17 +1190,31 @@ export default function AdminCards() {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
-              <th style={{ padding: 12, textAlign: "left", fontSize: 13, fontWeight: 600 }}>Title</th>
-              <th style={{ padding: 12, textAlign: "left", fontSize: 13, fontWeight: 600 }}>Type</th>
-              <th style={{ padding: 12, textAlign: "left", fontSize: 13, fontWeight: 600 }}>Query</th>
-              <th style={{ padding: 12, textAlign: "left", fontSize: 13, fontWeight: 600 }}>Status</th>
+              <th onClick={() => sortCards("title")} style={{ padding: 12, textAlign: "left", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Title {sortColumn === "title" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+              </th>
+              <th onClick={() => sortCards("description")} style={{ padding: 12, textAlign: "left", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Description {sortColumn === "description" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+              </th>
+              <th onClick={() => sortCards("visualization_type")} style={{ padding: 12, textAlign: "left", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Type {sortColumn === "visualization_type" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+              </th>
+              <th onClick={() => sortCards("sql_query")} style={{ padding: 12, textAlign: "left", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Query {sortColumn === "sql_query" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+              </th>
+              <th onClick={() => sortCards("is_active")} style={{ padding: 12, textAlign: "left", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Status {sortColumn === "is_active" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+              </th>
               <th style={{ padding: 12, textAlign: "right", fontSize: 13, fontWeight: 600 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {cards.map(card => (
+            {sortedCards.map(card => (
               <tr key={card.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                 <td style={{ padding: 12, fontSize: 14 }}>{card.title}</td>
+                <td style={{ padding: 12, fontSize: 14, color: "#6b7280", maxWidth: 280 }}>
+                  {card.description ? (card.description.length > 80 ? `${card.description.substring(0, 80)}...` : card.description) : "—"}
+                </td>
                 <td style={{ padding: 12, fontSize: 14 }}>
                   <span style={{
                     padding: "2px 8px",

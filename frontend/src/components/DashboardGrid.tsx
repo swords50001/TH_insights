@@ -39,6 +39,7 @@ export type GroupPosition = {
 	y: number;
 	width?: number;
 	height?: number;
+	showInSidebar?: boolean;
 };
 
 type DashboardGridProps = {
@@ -368,16 +369,21 @@ export function DashboardGrid({
 	};
 
 	type SectionBucket = {
+		label: string;
 		order: number;
 		groups: Record<string, GroupBucket>;
 	};
 
+	const NO_SECTION_KEY = "__NO_SECTION__";
+
 	const groupedBySection = cards.reduce((acc, card) => {
-		const sectionName = card.section_name?.trim() || "General";
+		const sectionLabel = card.section_name?.trim() || "";
+		const sectionName = sectionLabel || NO_SECTION_KEY;
 		const groupName = card.group_name?.trim() || "Ungrouped";
 
 		if (!acc[sectionName]) {
 			acc[sectionName] = {
+				label: sectionLabel,
 				order: card.section_order ?? 0,
 				groups: {},
 			};
@@ -399,9 +405,9 @@ export function DashboardGrid({
 
 	const sortedSections = Object.entries(groupedBySection)
 		.sort(([, a], [, b]) => a.order - b.order)
-		.map(([sectionName, section]) => {
+		.map(([sectionKey, section]) => {
 			const groups = Object.entries(section.groups).sort(([, a], [, b]) => a.order - b.order);
-			return { sectionName, section, groups };
+			return { sectionKey, section, groups };
 		});
 
 	// Calculate required height for the grid
@@ -434,25 +440,27 @@ export function DashboardGrid({
 					paddingBottom: "40px",
 				}}
 			>
-			{sortedSections.map(({ sectionName, groups }) => (
+			{sortedSections.map(({ sectionKey, section, groups }) => (
 				<div
-					key={sectionName}
-					id={toSectionAnchorId(sectionName)}
-					style={{ marginBottom: 40 }}
+					key={sectionKey}
+					id={section.label ? toSectionAnchorId(section.label) : undefined}
+					style={{ marginBottom: section.label ? 40 : 24 }}
 				>
-					<div
-						style={{
-							padding: "10px 16px",
-							marginBottom: 16,
-							borderRadius: 8,
-							background: "#e5e7eb",
-							color: "#1f2937",
-							fontSize: 18,
-							fontWeight: 700,
-						}}
-					>
-						{sectionName}
-					</div>
+					{section.label && (
+						<div
+							style={{
+								padding: "10px 16px",
+								marginBottom: 16,
+								borderRadius: 8,
+								background: "#e5e7eb",
+								color: "#1f2937",
+								fontSize: 18,
+								fontWeight: 700,
+							}}
+						>
+							{section.label}
+						</div>
+					)}
 
 					{groups.map(([groupName, group]) => {
 						const position = groupPositions.find((p) => p.groupName === groupName);
@@ -476,7 +484,7 @@ export function DashboardGrid({
 						};
 
 						return (
-							<div key={`${sectionName}-${groupName}`} id={toGroupAnchorId(groupName)} data-group-name={groupName} style={containerStyle}>
+							<div key={`${sectionKey}-${groupName}`} id={toGroupAnchorId(groupName)} data-group-name={groupName} style={containerStyle}>
 								<div
 									onMouseDown={(e) => handleGroupDrag(groupName, e)}
 									style={{
