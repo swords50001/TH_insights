@@ -36,6 +36,12 @@ interface Card {
   conditional_formatting?: ConditionalFormattingRule[];
   pivot_enabled?: boolean;
   pivot_config?: PivotConfig;
+  trending_enabled?: boolean;
+  trending_comparison_type?: "previous_period" | "target" | null;
+  trending_comparison_field?: string;
+  trending_target_value?: number;
+  metric_drilldown_enabled?: boolean;
+  metric_drilldown_query?: string;
 }
 
 // Type definition for data rows
@@ -51,6 +57,9 @@ export function DashboardCard({ card, filters = {} }: DashboardCardProps) {
   const [rawData, setRawData] = useState<DataRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [metricDrilldownData, setMetricDrilldownData] = useState<DataRow[] | null>(null);
+  const [metricDrilldownLoading, setMetricDrilldownLoading] = useState(false);
+  const [metricDrilldownError, setMetricDrilldownError] = useState<string | null>(null);
 
   console.log('DashboardCard rendering for:', card.id, card.title);
   console.log('Card visualization_type:', card.visualization_type);
@@ -94,7 +103,7 @@ export function DashboardCard({ card, filters = {} }: DashboardCardProps) {
             // For metrics, expect a single row with a 'total' or numeric field
             const firstRow = rows[0] || {};
             const value = firstRow.total ?? Object.values(firstRow)[0] ?? 0;
-            setData([{ value }]);
+            setData([{ ...firstRow, value }]);
           } else {
             // For tables, use the raw rows
             setData(rows);
@@ -113,15 +122,182 @@ export function DashboardCard({ card, filters = {} }: DashboardCardProps) {
 
   if (card.visualization_type === "metric") {
     const value = (data[0]?.value ?? null) as number | null;
+    const metricRow = data[0] || {};
+    
+    // Calculate trend direction based on trending configuration
+    let trendDirection: "up" | "down" | "neutral" | undefined = undefined;
+    
+    if (card.trending_enabled && card.trending_comparison_type) {
+      if (card.trending_comparison_type === "previous_period" && card.trending_comparison_field) {
+        // Compare current value with previous period value
+        const previousValue = metricRow[card.trending_comparison_field];
+        if (previousValue !== undefined && previousValue !== null && value !== null) {
+          if (value > previousValue) {
+            trendDirection = "up";
+          } else if (value < previousValue) {
+            trendDirection = "down";
+          } else {
+            trendDirection = "neutral";
+          }
+        }
+      } else if (card.trending_comparison_type === "target" && card.trending_target_value !== undefined) {
+        // Compare current value with target value
+        if (value !== null) {
+          if (value > card.trending_target_value) {
+            trendDirection = "up";
+          } else if (value < card.trending_target_value) {
+            trendDirection = "down";
+          } else {
+            trendDirection = "neutral";
+          }
+        }
+      }
+    }
+    
+    // Handle metric drill-down
+    const handleMetricDrill = async () => {
+      if (!card.metric_drilldown_enabled || !card.metric_drilldown_query) return;
+      
+      try {
+        setMetricDrilldownLoading(true);
+        setMetricDrilldownError(null);
+
+        let query = card.metric_drilldown_query;
+        Object.keys(metricRow).forEach(key => {
+          const placeholder = `{${key}}`;
+          const prefixedPlaceholder = `{p.${key}}`;
+          const fieldValue = metricRow[key];
+
+          let replacementValue: string;
+          if (typeof fieldValue === "string") {
+            replacementValue = `'${fieldValue.replace(/'/g, "''")}'`;
+          } else if (fieldValue === null || fieldValue === undefined) {
+            replacementValue = "NULL";
+          } else {
+            replacementValue = String(fieldValue);
+          }
+
+          const placeholderPattern = new RegExp(
+            `(${placeholder.replace(/[{}]/g, "\\$&")}|${prefixedPlaceholder.replace(/[{}]/g, "\\$&")})`,
+            "g"
+          );
+          query = query.replace(placeholderPattern, replacementValue);
+        });
+
+        const res = await api.post("/dashboard/cards/preview/data", {
+          sql_query: query,
+        });
+        setMetricDrilldownData(res.data);
+      } catch (e: any) {
+        setMetricDrilldownError(e.response?.data?.error || e.message || "Failed to load drill-down data");
+      } finally {
+        setMetricDrilldownLoading(false);
+      }
+    };
+    
     return (
-      <TotalCard 
-        title={card.hide_title ? "" : card.title} 
-        value={value} 
-        loading={loading} 
-        error={error}
-        fontSize={card.font_size}
-        fontFamily={card.font_family}
-      />
+      <>
+        <TotalCard 
+          title={card.hide_title ? "" : card.title} 
+          value={value} 
+          loading={loading} 
+          error={error}
+          fontSize={card.font_size}
+          fontFamily={card.font_family}
+          trendDirection={trendDirection}
+          isDrillable={card.metric_drilldown_enabled}
+          onDrill={card.metric_drilldown_enabled ? handleMetricDrill : undefined}
+        />
+        {metricDrilldownData && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+            padding: 24,
+          }} onClick={() => setMetricDrilldownData(null)}>
+            <div style={{
+              background: "#fff",
+              borderRadius: 8,
+              width: "90%",
+              maxWidth: 1000,
+              maxHeight: "80vh",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }} onClick={(e) => e.stopPropagation()}>
+              <div style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #e5e7eb",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Metric Details</h3>
+                <button
+                  onClick={() => setMetricDrilldownData(null)}
+                  style={{
+                    border: "1px solid #d1d5db",
+                    background: "#fff",
+                    borderRadius: 6,
+                    padding: "4px 10px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+              <div style={{ overflow: "auto", padding: 16 }}>
+                {metricDrilldownLoading && <div>Loading details...</div>}
+                {metricDrilldownError && <div style={{ color: "#dc2626" }}>{metricDrilldownError}</div>}
+                {!metricDrilldownLoading && !metricDrilldownError && metricDrilldownData.length > 0 && (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        {Object.keys(metricDrilldownData[0]).map((key) => (
+                          <th key={key} style={{
+                            textAlign: "left",
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #e5e7eb",
+                            fontSize: 12,
+                            color: "#4b5563",
+                          }}>
+                            {key}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {metricDrilldownData.map((row, index) => (
+                        <tr key={index}>
+                          {Object.keys(metricDrilldownData[0]).map((key) => (
+                            <td key={key} style={{
+                              padding: "8px 10px",
+                              borderBottom: "1px solid #f3f4f6",
+                              fontSize: 13,
+                            }}>
+                              {String(row[key] ?? "")}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                {!metricDrilldownLoading && !metricDrilldownError && metricDrilldownData.length === 0 && (
+                  <div style={{ color: "#6b7280" }}>No detail rows found.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 

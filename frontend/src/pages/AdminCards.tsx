@@ -102,6 +102,12 @@ interface Card {
     valueField: string;
     aggregation: "sum" | "avg" | "count" | "min" | "max";
   };
+  trending_enabled?: boolean;
+  trending_comparison_type?: "previous_period" | "target" | null;
+  trending_comparison_field?: string;
+  trending_target_value?: number;
+  metric_drilldown_enabled?: boolean;
+  metric_drilldown_query?: string;
   is_active: boolean;
 }
 
@@ -167,6 +173,12 @@ export default function AdminCards() {
       sql_query: "",
       visualization_type: "metric",
       is_active: true,
+      trending_enabled: false,
+      trending_comparison_type: null,
+      trending_comparison_field: "",
+      trending_target_value: undefined,
+      metric_drilldown_enabled: false,
+      metric_drilldown_query: "",
     });
     setEditingCard(null);
     setPreviewData(null);
@@ -257,6 +269,12 @@ export default function AdminCards() {
       conditional_formatting: card.conditional_formatting,
       pivot_enabled: card.pivot_enabled,
       pivot_config: card.pivot_config,
+      trending_enabled: card.trending_enabled,
+      trending_comparison_type: card.trending_comparison_type,
+      trending_comparison_field: card.trending_comparison_field,
+      trending_target_value: card.trending_target_value,
+        metric_drilldown_enabled: card.metric_drilldown_enabled,
+        metric_drilldown_query: card.metric_drilldown_query,
       is_active: card.is_active,
     });
   };
@@ -268,6 +286,52 @@ export default function AdminCards() {
       });
     }
   };
+
+  const getMetricPreviewTrend = () => {
+    if (
+      form.visualization_type !== "metric" ||
+      !previewData ||
+      previewData.length === 0 ||
+      !form.trending_enabled ||
+      !form.trending_comparison_type
+    ) {
+      return null;
+    }
+
+    const firstRow = previewData[0] || {};
+    const currentRawValue = firstRow.total ?? Object.values(firstRow)[0];
+    const currentValue = Number(currentRawValue);
+
+    if (!Number.isFinite(currentValue)) return null;
+
+    let comparisonValue: number | null = null;
+
+    if (form.trending_comparison_type === "previous_period" && form.trending_comparison_field) {
+      const previousRawValue = firstRow[form.trending_comparison_field];
+      const parsed = Number(previousRawValue);
+      comparisonValue = Number.isFinite(parsed) ? parsed : null;
+    }
+
+    if (form.trending_comparison_type === "target" && form.trending_target_value !== undefined) {
+      comparisonValue = Number(form.trending_target_value);
+    }
+
+    if (comparisonValue === null || !Number.isFinite(comparisonValue)) {
+      return { symbol: "—", color: "#6b7280", label: "Comparison value not found" };
+    }
+
+    if (currentValue > comparisonValue) {
+      return { symbol: "↑", color: "#10b981", label: `Trending up vs ${comparisonValue.toLocaleString()}` };
+    }
+
+    if (currentValue < comparisonValue) {
+      return { symbol: "↓", color: "#ef4444", label: `Trending down vs ${comparisonValue.toLocaleString()}` };
+    }
+
+    return { symbol: "—", color: "#6b7280", label: "No change" };
+  };
+
+  const metricPreviewTrend = getMetricPreviewTrend();
 
   return (
     <div style={{ padding: 24, maxWidth: 1400, margin: "0 auto" }}>
@@ -677,6 +741,148 @@ export default function AdminCards() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Metric card configuration */}
+          {form.visualization_type === "metric" && (
+            <div style={{ marginTop: 16, padding: 16, background: "#fef3c7", borderRadius: 6, border: "1px solid #fcd34d" }}>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: "#92400e" }}>
+                Metric Card Configuration
+              </div>
+              
+              {/* Trending Display */}
+              <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #fcd34d" }}>
+                <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+                  <input
+                    type="checkbox"
+                    id="trending_enabled"
+                    checked={form.trending_enabled || false}
+                    onChange={e => setForm({ ...form, trending_enabled: e.target.checked })}
+                    style={{ marginRight: 8 }}
+                  />
+                  <label htmlFor="trending_enabled" style={{ fontSize: 14, fontWeight: 500 }}>
+                    Show Trend Indicator (↑ ↓ —)
+                  </label>
+                </div>
+
+                {form.trending_enabled && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                        Comparison Type
+                      </label>
+                      <select
+                        value={form.trending_comparison_type || ""}
+                        onChange={e => setForm({ ...form, trending_comparison_type: (e.target.value as "previous_period" | "target" | "") || null })}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: 6,
+                          fontSize: 13,
+                        }}
+                      >
+                        <option value="">Select comparison type...</option>
+                        <option value="previous_period">Compare to Previous Period</option>
+                        <option value="target">Compare to Target Value</option>
+                      </select>
+                      <div style={{ marginTop: 4, fontSize: 11, color: "#6b7280" }}>
+                        How to determine if metric is trending up or down
+                      </div>
+                    </div>
+
+                    {form.trending_comparison_type === "previous_period" && (
+                      <div>
+                        <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                          Comparison Field
+                        </label>
+                        <input
+                          type="text"
+                          value={form.trending_comparison_field || ""}
+                          onChange={e => setForm({ ...form, trending_comparison_field: e.target.value })}
+                          placeholder="e.g., 'previous_month' column/alias"
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            border: "1px solid #d1d5db",
+                            borderRadius: 6,
+                            fontSize: 13,
+                          }}
+                        />
+                        <div style={{ marginTop: 4, fontSize: 11, color: "#6b7280" }}>
+                          Column name or alias for previous period value
+                        </div>
+                      </div>
+                    )}
+
+                    {form.trending_comparison_type === "target" && (
+                      <div>
+                        <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                          Target Value
+                        </label>
+                        <input
+                          type="number"
+                          value={form.trending_target_value ?? ""}
+                          onChange={e => setForm({ ...form, trending_target_value: e.target.value ? parseFloat(e.target.value) : undefined })}
+                          placeholder="e.g., 1000"
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            border: "1px solid #d1d5db",
+                            borderRadius: 6,
+                            fontSize: 13,
+                          }}
+                        />
+                        <div style={{ marginTop: 4, fontSize: 11, color: "#6b7280" }}>
+                          Target value to compare metric against
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Metric Drill-down */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+                  <input
+                    type="checkbox"
+                    id="metric_drilldown_enabled"
+                    checked={form.visualization_type === "metric" && (form as any).metric_drilldown_enabled || false}
+                    onChange={e => setForm({ ...form, metric_drilldown_enabled: e.target.checked })}
+                    style={{ marginRight: 8 }}
+                  />
+                  <label htmlFor="metric_drilldown_enabled" style={{ fontSize: 14, fontWeight: 500 }}>
+                    Enable Drill-Down (Click metric for details)
+                  </label>
+                </div>
+
+                {(form as any).metric_drilldown_enabled && (
+                  <div>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                      Drill-Down Query
+                    </label>
+                    <textarea
+                      value={(form as any).metric_drilldown_query || ""}
+                      placeholder="SELECT * FROM details WHERE ..."
+                      onChange={e => setForm({ ...form, metric_drilldown_query: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: 6,
+                        fontSize: 13,
+                        fontFamily: "monospace",
+                        minHeight: 80,
+                      }}
+                    />
+                    <div style={{ marginTop: 6, fontSize: 11, color: "#6b7280" }}>
+                      Query to execute when user clicks on the metric value
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1121,16 +1327,35 @@ export default function AdminCards() {
                 // Metric Preview (single number)
                 <div
                   style={{
-                    fontSize: 48,
-                    fontWeight: 700,
-                    color: "#1f2937",
                     textAlign: "center",
                     padding: 40,
                     background: "#f9fafb",
                     borderRadius: 8,
                   }}
                 >
-                  {Object.values(previewData[0])[0]?.toLocaleString() || "N/A"}
+                  <div style={{ fontSize: 48, fontWeight: 700, color: "#1f2937" }}>
+                    {Object.values(previewData[0])[0]?.toLocaleString() || "N/A"}
+                  </div>
+                  {metricPreviewTrend && (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 14,
+                        color: metricPreviewTrend.color,
+                        fontWeight: 600,
+                        background: "#fff",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 999,
+                        padding: "6px 12px",
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>{metricPreviewTrend.symbol}</span>
+                      <span>{metricPreviewTrend.label}</span>
+                    </div>
+                  )}
                 </div>
               ) : form.visualization_type === "chart" ? (
                 // Chart Preview

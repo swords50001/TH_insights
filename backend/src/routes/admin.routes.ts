@@ -13,25 +13,25 @@ res.json(rows);
 });
 
 router.post("/cards", async (req: AuthRequest, res) => {
-  const { title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, section_name, section_order, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config } = req.body;
+  const { title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, section_name, section_order, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config, trending_enabled, trending_comparison_type, trending_comparison_field, trending_target_value, metric_drilldown_enabled, metric_drilldown_query } = req.body;
   const tenant_id = req.user?.tenant_id || 'default';
   const { rows } = await pool.query(
-    `INSERT INTO dashboard_cards (title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, section_name, section_order, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config, tenant_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
-    [title, description, sql_query, visualization_type, chart_type || null, drilldown_enabled || false, drilldown_query || null, hide_title || false, font_size || 'medium', font_family || 'default', section_name || null, section_order || 0, group_name || null, group_order || 0, header_bg_color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', header_text_color || '#ffffff', conditional_formatting ? JSON.stringify(conditional_formatting) : '[]', pivot_enabled || false, pivot_config ? JSON.stringify(pivot_config) : null, tenant_id]
+    `INSERT INTO dashboard_cards (title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, section_name, section_order, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config, trending_enabled, trending_comparison_type, trending_comparison_field, trending_target_value, metric_drilldown_enabled, metric_drilldown_query, tenant_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26) RETURNING *`,
+    [title, description, sql_query, visualization_type, chart_type || null, drilldown_enabled || false, drilldown_query || null, hide_title || false, font_size || 'medium', font_family || 'default', section_name || null, section_order || 0, group_name || null, group_order || 0, header_bg_color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', header_text_color || '#ffffff', conditional_formatting ? JSON.stringify(conditional_formatting) : '[]', pivot_enabled || false, pivot_config ? JSON.stringify(pivot_config) : null, trending_enabled || false, trending_comparison_type || null, trending_comparison_field || null, trending_target_value || null, metric_drilldown_enabled || false, metric_drilldown_query || null, tenant_id]
   );
   res.json(rows[0]);
 });
 
 router.put("/cards/:id", async (req: AuthRequest, res) => {
   const { id } = req.params;
-  const { title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, is_active, font_size, font_family, section_name, section_order, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config } = req.body;
+  const { title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, is_active, font_size, font_family, section_name, section_order, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config, trending_enabled, trending_comparison_type, trending_comparison_field, trending_target_value, metric_drilldown_enabled, metric_drilldown_query } = req.body;
   const tenant_id = req.user?.tenant_id || 'default';
   const { rows } = await pool.query(
     `UPDATE dashboard_cards 
-     SET title = $1, description = $2, sql_query = $3, visualization_type = $4, chart_type = $5, drilldown_enabled = $6, drilldown_query = $7, hide_title = $8, is_active = $9, font_size = $10, font_family = $11, section_name = $12, section_order = $13, group_name = $14, group_order = $15, header_bg_color = $16, header_text_color = $17, conditional_formatting = $18, pivot_enabled = $19, pivot_config = $20
-     WHERE id = $21 AND tenant_id = $22 RETURNING *`,
-    [title, description, sql_query, visualization_type, chart_type || null, drilldown_enabled || false, drilldown_query || null, hide_title || false, is_active, font_size || 'medium', font_family || 'default', section_name || null, section_order || 0, group_name || null, group_order || 0, header_bg_color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', header_text_color || '#ffffff', conditional_formatting ? JSON.stringify(conditional_formatting) : '[]', pivot_enabled || false, pivot_config ? JSON.stringify(pivot_config) : null, id, tenant_id]
+     SET title = $1, description = $2, sql_query = $3, visualization_type = $4, chart_type = $5, drilldown_enabled = $6, drilldown_query = $7, hide_title = $8, is_active = $9, font_size = $10, font_family = $11, section_name = $12, section_order = $13, group_name = $14, group_order = $15, header_bg_color = $16, header_text_color = $17, conditional_formatting = $18, pivot_enabled = $19, pivot_config = $20, trending_enabled = $21, trending_comparison_type = $22, trending_comparison_field = $23, trending_target_value = $24, metric_drilldown_enabled = $25, metric_drilldown_query = $26
+     WHERE id = $27 AND tenant_id = $28 RETURNING *`,
+    [title, description, sql_query, visualization_type, chart_type || null, drilldown_enabled || false, drilldown_query || null, hide_title || false, is_active, font_size || 'medium', font_family || 'default', section_name || null, section_order || 0, group_name || null, group_order || 0, header_bg_color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', header_text_color || '#ffffff', conditional_formatting ? JSON.stringify(conditional_formatting) : '[]', pivot_enabled || false, pivot_config ? JSON.stringify(pivot_config) : null, trending_enabled || false, trending_comparison_type || null, trending_comparison_field || null, trending_target_value || null, metric_drilldown_enabled || false, metric_drilldown_query || null, id, tenant_id]
   );
   res.json(rows[0]);
 });
@@ -104,22 +104,28 @@ router.post("/cards/import", async (req: AuthRequest, res) => {
         card.conditional_formatting ? JSON.stringify(card.conditional_formatting) : '[]',
         card.pivot_enabled || false,
         card.pivot_config ? JSON.stringify(card.pivot_config) : null,
+        card.trending_enabled || false,
+        card.trending_comparison_type || null,
+        card.trending_comparison_field || null,
+        card.trending_target_value || null,
+        card.metric_drilldown_enabled || false,
+        card.metric_drilldown_query || null,
       ];
 
       if (existing.rows.length) {
         const id = existing.rows[0].id;
         const { rows } = await client.query(
           `UPDATE dashboard_cards 
-           SET title = $1, description = $2, sql_query = $3, visualization_type = $4, chart_type = $5, drilldown_enabled = $6, drilldown_query = $7, hide_title = $8, is_active = $9, font_size = $10, font_family = $11, section_name = $12, section_order = $13, group_name = $14, group_order = $15, header_bg_color = $16, header_text_color = $17, conditional_formatting = $18, pivot_enabled = $19, pivot_config = $20
-           WHERE id = $21 AND tenant_id = $22 RETURNING *`,
+           SET title = $1, description = $2, sql_query = $3, visualization_type = $4, chart_type = $5, drilldown_enabled = $6, drilldown_query = $7, hide_title = $8, is_active = $9, font_size = $10, font_family = $11, section_name = $12, section_order = $13, group_name = $14, group_order = $15, header_bg_color = $16, header_text_color = $17, conditional_formatting = $18, pivot_enabled = $19, pivot_config = $20, trending_enabled = $21, trending_comparison_type = $22, trending_comparison_field = $23, trending_target_value = $24, metric_drilldown_enabled = $25, metric_drilldown_query = $26
+           WHERE id = $27 AND tenant_id = $28 RETURNING *`,
           [...params, id, tenant_id]
         );
         updated += 1;
         results.push(rows[0]);
       } else {
         const { rows } = await client.query(
-          `INSERT INTO dashboard_cards (title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, is_active, font_size, font_family, section_name, section_order, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config, tenant_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *`,
+          `INSERT INTO dashboard_cards (title, description, sql_query, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, is_active, font_size, font_family, section_name, section_order, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config, trending_enabled, trending_comparison_type, trending_comparison_field, trending_target_value, metric_drilldown_enabled, metric_drilldown_query, tenant_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27) RETURNING *`,
           [...params, tenant_id]
         );
         inserted += 1;

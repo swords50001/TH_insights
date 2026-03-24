@@ -24,7 +24,7 @@ const PORT = 8080;
 /* ---------------- MIDDLEWARE ---------------- */
 
 app.use(cors({ 
-  origin: ["http://localhost:5173", "http://localhost:3000", "https://insights.curametrix.com"],
+  origin: ["http://localhost:5173", "http://localhost:3000", "https://insights.curavaunt.com"],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'Expires']
@@ -103,7 +103,7 @@ app.get("/dashboard/cards", auth, async (req: AuthRequest, res) => {
   try {
     const tenant_id = req.user?.tenant_id || 'default';
     const result = await pool.query(
-      "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, section_name, section_order, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config FROM dashboard_cards WHERE tenant_id = $1 ORDER BY section_order, group_order, id",
+      "SELECT id, title, visualization_type, chart_type, drilldown_enabled, drilldown_query, hide_title, font_size, font_family, section_name, section_order, group_name, group_order, header_bg_color, header_text_color, conditional_formatting, pivot_enabled, pivot_config, trending_enabled, trending_comparison_type, trending_comparison_field, trending_target_value, metric_drilldown_enabled, metric_drilldown_query FROM dashboard_cards WHERE tenant_id = $1 ORDER BY section_order, group_order, id",
       [tenant_id]
     );
     res.json(result.rows);

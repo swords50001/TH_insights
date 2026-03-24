@@ -72,7 +72,7 @@ router.post("/forgot-password", async (req, res) => {
       [token, expires, rows[0].id]
     );
 
-    const appUrl = process.env.APP_URL || "https://insights.curametrix.com";
+    const appUrl = process.env.APP_URL || "https://insights.curavaunt.com";
     const resetUrl = `${appUrl}/reset-password?token=${token}`;
 
     const transporter = getMailTransport();

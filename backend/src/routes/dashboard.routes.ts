@@ -128,13 +128,18 @@ function substituteParameters(sql: string, params: Record<string, any>): { query
 
 router.get("/cards", auth, async (req: any, res) => {
 try {
+  const tenant_id = req.user?.tenant_id || 'default';
   const { rows } = await pool.query(
     `SELECT 
       id, title, description, sql_query, visualization_type, chart_type,
       drilldown_enabled, drilldown_query, hide_title, font_size, font_family,
       group_name, group_order, header_bg_color, header_text_color,
-      conditional_formatting, pivot_enabled, pivot_config, is_active, created_at, updated_at
-    FROM dashboard_cards WHERE is_active=true`
+      conditional_formatting, pivot_enabled, pivot_config,
+      trending_enabled, trending_comparison_type, trending_comparison_field, trending_target_value,
+      metric_drilldown_enabled, metric_drilldown_query,
+      is_active, created_at, updated_at
+    FROM dashboard_cards WHERE is_active=true AND tenant_id = $1`,
+    [tenant_id]
   );
   
   console.log('=== DASHBOARD CARDS API ===');
