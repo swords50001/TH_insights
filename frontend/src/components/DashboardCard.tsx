@@ -85,7 +85,7 @@ export function DashboardCard({
 				return (
 					<span style={{ 
 						color: "#10b981", 
-						fontSize: "1.2em", 
+						fontSize: "0.5em", 
 						marginLeft: "8px",
 						fontWeight: "bold"
 					}}>↑</span>
@@ -94,7 +94,7 @@ export function DashboardCard({
 				return (
 					<span style={{ 
 						color: "#ef4444", 
-						fontSize: "1.2em", 
+						fontSize: "0.5em", 
 						marginLeft: "8px",
 						fontWeight: "bold"
 					}}>↓</span>
@@ -103,7 +103,7 @@ export function DashboardCard({
 				return (
 					<span style={{ 
 						color: "#6b7280", 
-						fontSize: "1.2em", 
+						fontSize: "0.5em", 
 						marginLeft: "8px",
 						fontWeight: "bold"
 					}}>—</span>
@@ -156,7 +156,7 @@ export function DashboardCard({
 					<div className="mt-1 text-xs text-gray-500">{subtitle}</div>
 				)}
 				{isDrillable && onDrill && (
-					<div className="mt-2 text-xs text-blue-600 cursor-pointer hover:text-blue-800">
+					<div className="mt-2 text-blue-600 cursor-pointer hover:text-blue-800" style={{ fontSize: "10px" }}>
 						Click to view details →
 					</div>
 				)}

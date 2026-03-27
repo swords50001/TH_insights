@@ -99,6 +99,45 @@ export function AdminDashboard() {
     );
   };
 
+  const buildGroupPositionsWithVisibility = (
+    visibility: Record<string, boolean>
+  ): GroupPosition[] => {
+    const visibleAndHiddenGroupNames = extractGroupNames(cards, groupPositions, visibility, true);
+    const allGroupNames = new Set<string>([
+      ...visibleAndHiddenGroupNames,
+      ...groupPositions.map((position) => position.groupName).filter(Boolean),
+    ]);
+
+    return Array.from(allGroupNames).map((groupName) => {
+      const existing = groupPositions.find((position) => position.groupName === groupName);
+      return {
+        groupName,
+        x: existing?.x ?? 0,
+        y: existing?.y ?? 0,
+        width: existing?.width,
+        height: existing?.height,
+        showInSidebar: visibility[groupName] !== false,
+      };
+    });
+  };
+
+  const persistSidebarVisibility = async (visibility: Record<string, boolean>) => {
+    const updatedGroupPositions = buildGroupPositionsWithVisibility(visibility);
+    setGroupPositions(updatedGroupPositions);
+    publishSidebarGroupState(cards, activeTabId, updatedGroupPositions, visibility);
+
+    if (!activeTabId) {
+      return;
+    }
+
+    try {
+      await publishLayout(cards, updatedGroupPositions, "admin", activeTabId);
+    } catch (err) {
+      console.error("Failed to save sidebar group visibility:", err);
+      alert("Failed to save sidebar group visibility");
+    }
+  };
+
   // Load dashboard tabs
   const loadTabs = async () => {
     try {
@@ -547,7 +586,7 @@ export function AdminDashboard() {
                         [groupName]: e.target.checked,
                       };
                       setGroupSidebarVisibility(updated);
-                      publishSidebarGroupState(cards, activeTabId, groupPositions, updated);
+                      void persistSidebarVisibility(updated);
                     }}
                   />
                 </label>
